@@ -27,6 +27,13 @@ CXXSRCS += $(patsubst %.aidl,%$(CXXEXT),$(AIDLSRCS))
 CXXSRCS += $(wildcard src/*.cpp)
 endif
 
+ifneq ($(CONFIG_PACKAGE_MANAGER_COMMAND),)
+PROGNAME += pm
+PRIORITY  = SCHED_PRIORITY_DEFAULT
+STACKSIZE = $(CONFIG_DEFAULT_TASK_STACKSIZE)
+MAINSRC += cmd/PmCommand.cpp
+endif
+
 ASRCS := $(wildcard $(ASRCS))
 CSRCS := $(wildcard $(CSRCS))
 CXXSRCS := $(wildcard $(CXXSRCS))
