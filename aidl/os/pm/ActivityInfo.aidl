@@ -18,6 +18,7 @@ package os.pm;
 
 parcelable ActivityInfo {
     @utf8InCpp String name;
-    @utf8InCpp String launchType;
+    @utf8InCpp String launchMode;
+    @utf8InCpp String taskAffinity;
     @utf8InCpp String[] actions;
 }
