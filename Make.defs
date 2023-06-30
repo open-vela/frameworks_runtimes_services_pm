@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ifneq ($(CONFIG_PACKAGE_MANAGER),)
+ifneq ($(CONFIG_SYSTEM_PACKAGE_SERVICE),)
 CONFIGURED_APPS += $(APPDIR)/frameworks/base/pm
 
 CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/frameworks/base/pm/aidl

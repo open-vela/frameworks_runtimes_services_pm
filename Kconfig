@@ -14,15 +14,15 @@
 # limitations under the License.
 #
 
-config PACKAGE_MANAGER
+config SYSTEM_PACKAGE_SERVICE
 	bool "Enable package manager"
 	default n
 	depends on ANDROID_BINDER
 	depends on SYSTEM_SERVER
 
-if PACKAGE_MANAGER
+if SYSTEM_PACKAGE_SERVICE
 
-config PACKAGE_MANAGER_COMMAND
+config SYSTEM_PACKAGE_SERVICE_COMMAND
 	tristate "Enable package manager command tool"
 	default n
 
