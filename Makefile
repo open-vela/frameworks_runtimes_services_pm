@@ -20,14 +20,14 @@ include $(APPDIR)/Make.defs
 
 CXXEXT = .cpp
 
-ifneq ($(CONFIG_PACKAGE_MANAGER),)
+ifneq ($(CONFIG_SYSTEM_PACKAGE_SERVICE),)
 AIDLSRCS += $(shell find aidl -name *.aidl)
 AIDLFLAGS = --lang=cpp --include=aidl/ -I. -haidl/ -oaidl/
 CXXSRCS += $(patsubst %.aidl,%$(CXXEXT),$(AIDLSRCS))
 CXXSRCS += $(wildcard src/*.cpp)
 endif
 
-ifneq ($(CONFIG_PACKAGE_MANAGER_COMMAND),)
+ifneq ($(CONFIG_SYSTEM_PACKAGE_SERVICE_COMMAND),)
 PROGNAME += pm
 PRIORITY  = SCHED_PRIORITY_DEFAULT
 STACKSIZE = $(CONFIG_DEFAULT_TASK_STACKSIZE)
