@@ -17,6 +17,7 @@
 #include "PackageUtils.h"
 
 #include <utils/Errors.h>
+#include <utils/Log.h>
 
 #include <chrono>
 #include <ctime>
@@ -50,24 +51,32 @@ std::string getCurrentTime() {
     return oss.str();
 }
 
-bool createDirectory(const char *path, perms p) {
+bool createDirectory(const char *path) {
     error_code ec;
     bool ret = create_directories(path, ec);
-    IF_OK_RETURN_WITH_LOG(ec, ret, "Failed create directory %s:%s\n", path, ec.message().c_str());
-    permissions(path, p, perm_options::add);
+    if (ec) {
+        ALOGE("Failed create directory %s:%s\n", path, ec.message().c_str());
+        return ret;
+    }
     return ret;
 }
 
 bool removeDirectory(const char *path) {
     error_code ec;
     int ret = remove_all(path, ec);
-    IF_OK_RETURN_WITH_LOG(ec, ret, "Failed to delete %s:%s", path, ec.message().c_str());
+    if (ec) {
+        ALOGE("Failed to delete %s:%s", path, ec.message().c_str());
+        return ret;
+    }
     return true;
 }
 
 int readFile(const char *filename, std::string &content) {
     ifstream file(filename);
-    IF_OK_RETURN_WITH_LOG(!file, android::NAME_NOT_FOUND, "Failed to open file %s", filename);
+    if (!file) {
+        ALOGE("Failed to open file %s", filename);
+        return android::NAME_NOT_FOUND;
+    }
     file.seekg(0, std::ios::end);
     content.resize(file.tellg());
     file.seekg(0, std::ios::beg);
@@ -78,7 +87,10 @@ int readFile(const char *filename, std::string &content) {
 
 int writeFile(const char *filename, const std::string &data) {
     ofstream file(filename);
-    IF_OK_RETURN_WITH_LOG(!file, android::NAME_NOT_FOUND, "Failed to open file %s", filename);
+    if (!file) {
+        ALOGE("Failed to open file %s", filename);
+        return android::NAME_NOT_FOUND;
+    }
     file << data;
     file.close();
     return 0;
