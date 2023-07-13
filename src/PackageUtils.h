@@ -16,38 +16,19 @@
 
 #pragma once
 
-#include <utils/Log.h>
-
 #include <filesystem>
 #include <iostream>
 
 namespace os {
 namespace pm {
 
-using std::filesystem::perms;
-
 #define PM_VERSION "1.0.0"
 #define MANIFEST "manifest.json"
 #define PACKAGE_CFG "/etc/package.cfg"
 #define PACKAGE_LIST_PATH "/data/app/packages.list"
 
-#define IF_OK_RETURN(cond, ret) \
-    do {                        \
-        if (cond) {             \
-            return ret;         \
-        }                       \
-    } while (0);
-
-#define IF_OK_RETURN_WITH_LOG(cond, ret, ...) \
-    do {                                      \
-        if (cond) {                           \
-            ALOGE(__VA_ARGS__);               \
-            return ret;                       \
-        }                                     \
-    } while (0);
-
 std::string getCurrentTime();
-bool createDirectory(const char *path, perms p);
+bool createDirectory(const char *path);
 bool removeDirectory(const char *path);
 int64_t getDirectorySize(const char *path);
 int readFile(const char *filename, std::string &content);
