@@ -16,6 +16,8 @@
 
 #include "PackageUtils.h"
 
+#include <rapidjson/prettywriter.h>
+#include <rapidjson/stringbuffer.h>
 #include <utils/Errors.h>
 #include <utils/Log.h>
 
@@ -28,6 +30,8 @@
 namespace os {
 namespace pm {
 
+using rapidjson::PrettyWriter;
+using rapidjson::StringBuffer;
 using std::error_code;
 using std::ifstream;
 using std::ofstream;
@@ -111,6 +115,32 @@ std::string joinPath(std::string basic, std::string suffix) {
     std::filesystem::path basePath = basic;
     basePath.append(suffix);
     return basePath.string();
+}
+
+bool hasMember(const rapidjson::Value &parent, const std::string &name) {
+    if (parent.IsNull()) return false;
+    return parent.HasMember(name.c_str());
+}
+
+int getDocument(const char *path, rapidjson::Document &document) {
+    std::string content;
+    int ret = readFile(path, content);
+    if (ret < 0) {
+        ALOGE("read file %s failed", path);
+        return ret;
+    }
+    if (document.Parse(content.c_str()).HasParseError()) {
+        ALOGE("parse file %s failed,is not json format", path);
+        return android::BAD_VALUE;
+    }
+    return 0;
+}
+
+std::string toPrettyString(const rapidjson::Document &doc) {
+    StringBuffer buffer;
+    PrettyWriter<StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    return buffer.GetString();
 }
 
 } // namespace pm
