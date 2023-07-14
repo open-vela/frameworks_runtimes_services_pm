@@ -26,4 +26,9 @@ config SYSTEM_PACKAGE_SERVICE_COMMAND
 	tristate "Enable package manager command tool"
 	default n
 
+config SYSTEM_PACKAGE_SERVICE_TEST
+	bool "Enable package manager google test"
+    default n
+    depends on GOOGLE_TEST
+
 endif
