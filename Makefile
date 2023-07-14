@@ -21,6 +21,7 @@ include $(APPDIR)/Make.defs
 CXXEXT = .cpp
 
 ifneq ($(CONFIG_SYSTEM_PACKAGE_SERVICE),)
+CXXFLAGS += -Wno-class-memaccess
 CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/external/rapidjson/rapidjson/include
 AIDLSRCS += $(shell find aidl -name *.aidl)
 AIDLFLAGS = --lang=cpp --include=aidl/ -I. -haidl/ -oaidl/
