@@ -35,6 +35,12 @@ STACKSIZE = $(CONFIG_DEFAULT_TASK_STACKSIZE)
 MAINSRC += cmd/PmCommand.cpp
 endif
 
+ifneq ($(CONFIG_SYSTEM_PACKAGE_SERVICE_TEST),)
+CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/external/googletest/googletest/googletest/include
+PROGNAME += pmTest
+MAINSRC += test/PackageManagerTest.cpp
+endif
+
 ASRCS := $(wildcard $(ASRCS))
 CSRCS := $(wildcard $(CSRCS))
 CXXSRCS := $(wildcard $(CXXSRCS))
