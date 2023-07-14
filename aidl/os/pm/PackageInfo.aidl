@@ -28,7 +28,11 @@ parcelable PackageInfo {
     @utf8InCpp String installedPath;
     @utf8InCpp String manifest;
     @utf8InCpp String appType;
+    @utf8InCpp String version;
+    @utf8InCpp String shasum;
+    @utf8InCpp String installTime;
     ActivityInfo[] activitiesInfo;
     @nullable QuickAppInfo extra;
     int userId;
+    long size;
 }
