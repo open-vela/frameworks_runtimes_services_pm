@@ -16,25 +16,8 @@
 
 package os.pm;
 
-import os.pm.ActivityInfo;
-import os.pm.QuickAppInfo;
-import os.pm.ServiceInfo;
-
-parcelable PackageInfo {
-    @utf8InCpp String packageName;
+parcelable ServiceInfo {
     @utf8InCpp String name;
-    @utf8InCpp String icon;
-    @utf8InCpp String execfile;
-    @utf8InCpp String entry;
-    @utf8InCpp String installedPath;
-    @utf8InCpp String manifest;
-    @utf8InCpp String appType;
-    @utf8InCpp String version;
-    @utf8InCpp String shasum;
-    @utf8InCpp String installTime;
-    ActivityInfo[] activitiesInfo;
-    ServiceInfo[] servicesInfo;
-    @nullable QuickAppInfo extra;
-    int userId;
-    long size;
+    boolean exported;
+    @utf8InCpp String[] actions;
 }
