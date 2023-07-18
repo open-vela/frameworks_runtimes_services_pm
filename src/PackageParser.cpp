@@ -94,6 +94,22 @@ int PackageParser::parseNativeManifest(const rapidjson::Document &document, Pack
         }
         info->activitiesInfo.push_back(activiyInfo);
     }
+
+    const rapidjson::Value &servicesArray =
+            getValue<const rapidjson::Value &>(document, "services", baseArray);
+    for (size_t i = 0; i < servicesArray.Size(); i++) {
+        ServiceInfo serviceInfo;
+        serviceInfo.name = getValue<std::string>(servicesArray[i], "name", "");
+        serviceInfo.exported = getValue<bool>(servicesArray[i], "exported", false);
+        const rapidjson::Value &intent =
+                getValue<const rapidjson::Value &>(servicesArray[i], "intent-filter", baseObject);
+        const rapidjson::Value &actionArray =
+                getValue<const rapidjson::Value &>(intent, "actions", baseArray);
+        for (size_t j = 0; j < actionArray.Size(); j++) {
+            serviceInfo.actions.push_back(actionArray[j].GetString());
+        }
+        info->servicesInfo.push_back(serviceInfo);
+    }
     return 0;
 }
 
