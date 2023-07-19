@@ -40,6 +40,7 @@ std::string joinPath(std::string basic, std::string suffix);
 bool hasMember(const rapidjson::Value &parent, const std::string &name);
 int getDocument(const char *path, rapidjson::Document &document);
 std::string toPrettyString(const rapidjson::Document &doc);
+std::string calculateShasum(const char *path);
 
 template <typename T>
 T getValue(const rapidjson::Value &parent, const std::string &key, const T &defaultValue) {

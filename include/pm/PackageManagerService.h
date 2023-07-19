@@ -28,8 +28,14 @@ namespace pm {
 
 using android::binder::Status;
 
+class PackageConfig;
+class PackageInstaller;
+class PackageParser;
+
 class PackageManagerService : public BnPackageManager {
 public:
+    PackageManagerService();
+    ~PackageManagerService();
     Status getAllPackageInfo(std::vector<PackageInfo> *pkgInfos);
     Status getPackageInfo(const std::string &packageName, PackageInfo *pkgInfo);
     Status clearAppCache(const std::string &packageName, int32_t *ret);
@@ -39,6 +45,13 @@ public:
     static android::String16 name() {
         return android::String16("package");
     }
+
+private:
+    void init();
+    std::map<std::string, PackageInfo> mPackageInfo;
+    PackageInstaller *mInstaller;
+    PackageParser *mParser;
+    PackageConfig *mConfig;
 }; // class PackageManagerService
 
 } // namespace pm
