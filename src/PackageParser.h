@@ -32,7 +32,7 @@ enum ApplicationType {
 
 class PackageParser {
 public:
-    int parseManifest(const char *path, PackageInfo *info);
+    int parseManifest(PackageInfo *info);
 
 private:
     ApplicationType getApplicationType(const std::string &str);

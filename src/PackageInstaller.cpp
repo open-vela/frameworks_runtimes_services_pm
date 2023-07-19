@@ -30,11 +30,6 @@ int32_t PackageInstaller::createUserId() {
     return 0;
 }
 
-std::string PackageInstaller::calculateShasum(const char *path) {
-    // TODO
-    return "";
-}
-
 int PackageInstaller::installApp(const std::string &srcPath, const std::string &dstPath) {
     // TODO
     return 0;
@@ -50,8 +45,8 @@ int PackageInstaller::installQuickApp(const std::string &srcPath, const std::str
     return 0;
 }
 
-bool PackageInstaller::loadPackageList(std::map<std::string, std::string> *pkgCaches) {
-    if (pkgCaches == nullptr) {
+bool PackageInstaller::loadPackageList(std::map<std::string, PackageInfo> *pkgInfos) {
+    if (pkgInfos == nullptr) {
         return false;
     }
 
@@ -64,14 +59,23 @@ bool PackageInstaller::loadPackageList(std::map<std::string, std::string> *pkgCa
     const rapidjson::Value &packagesArray =
             getValue<const rapidjson::Value &>(document, "packages", baseArray);
     for (unsigned int i = 0; i < packagesArray.Size(); i++) {
-        std::string packageName = getValue<std::string>(packagesArray[i], "package", "");
-        std::string installedPath = getValue<std::string>(packagesArray[i], "installedPath", "");
-        if (packageName.empty()) {
+        PackageInfo info;
+        info.packageName = getValue<std::string>(packagesArray[i], "package", "");
+        if (info.packageName.empty()) {
             ALOGE("packages.list has package field is empty");
             isNormal = false;
             continue;
         }
-        pkgCaches->insert(std::make_pair(packageName, installedPath));
+        info.appType = getValue<std::string>(packagesArray[i], "appType", "");
+        info.version = getValue<std::string>(packagesArray[i], "version", "");
+        info.installedPath = getValue<std::string>(packagesArray[i], "installedPath", "");
+        info.manifest = joinPath(info.installedPath, MANIFEST);
+        info.installTime = getValue<std::string>(packagesArray[i], "installedTime", "");
+        info.shasum = getValue<std::string>(packagesArray[i], "shasum", "");
+        info.userId = getValue<int>(packagesArray[i], "uid", 0);
+        info.size = getValue<int64_t>(packagesArray[i], "size", 0);
+        info.bAllValid = false;
+        pkgInfos->insert(std::make_pair(info.packageName, info));
     }
     return isNormal;
 }

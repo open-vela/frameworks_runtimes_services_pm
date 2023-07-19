@@ -23,43 +23,32 @@
 
 namespace os {
 namespace pm {
-int PackageParser::parseManifest(const char *path, PackageInfo *info) {
-    if (path == nullptr) return android::NOT_ENOUGH_DATA;
-    if (info == nullptr) return android::NO_INIT;
+int PackageParser::parseManifest(PackageInfo *info) {
+    if (info == nullptr) {
+        return android::NO_INIT;
+    }
 
     rapidjson::Document document;
-    int ret = getDocument(path, document);
+    int ret = getDocument(info->manifest.c_str(), document);
     if (ret) return ret;
 
-    info->packageName = getValue<std::string>(document, "package", "");
     if (info->packageName.empty()) {
-        ALOGE("Failed parse manifest package filed");
-        return android::BAD_VALUE;
+        info->packageName = getValue<std::string>(document, "package", "");
+        if (info->packageName.empty()) {
+            ALOGE("Failed parse manifest package field");
+            return android::BAD_VALUE;
+        }
+        info->appType = getValue<std::string>(document, "appType", "QUICKAPP");
+        info->version = getValue<std::string>(document, "versionName", "");
+        std::string sPath = info->manifest;
+        info->installedPath = sPath.replace(sPath.end() - strlen(MANIFEST), sPath.end(), "");
+        info->installTime = getCurrentTime();
+        info->size = getDirectorySize(info->installedPath.c_str());
+        info->shasum = calculateShasum(info->installedPath.c_str());
     }
-    info->appType = getValue<std::string>(document, "appType", "QUICKAPP");
     info->name = getValue<std::string>(document, "name", "");
     info->icon = getValue<std::string>(document, "icon", "");
-    info->version = getValue<std::string>(document, "versionName", "");
-    std::string sPath = std::string(path);
-    info->manifest = sPath;
-    info->installedPath = sPath.replace(sPath.end() - strlen(MANIFEST), sPath.end(), "");
-
-    rapidjson::Document docList;
-    ret = getDocument(PACKAGE_LIST_PATH, docList);
-    if (ret) return ret;
-    const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
-    const rapidjson::Value &packagesArray =
-            getValue<const rapidjson::Value &>(docList, "packages", baseArray);
-    for (unsigned int i = 0; i < packagesArray.Size(); i++) {
-        std::string packageName = getValue<std::string>(packagesArray[i], "package", "");
-        if (packageName == info->packageName) {
-            info->installTime = getValue<std::string>(packagesArray[i], "installedTime", "");
-            info->shasum = getValue<std::string>(packagesArray[i], "shasum", "");
-            info->userId = getValue<int>(packagesArray[i], "uid", 0);
-            info->size = getValue<int64_t>(packagesArray[i], "size", 0);
-            break;
-        }
-    }
+    info->bAllValid = true;
 
     switch (getApplicationType(info->appType)) {
         case ApplicationType::NATIVE:

@@ -27,9 +27,8 @@ class PackageInstaller {
 public:
     int installApp(const std::string& srcPath, const std::string& dstPath);
     int32_t createUserId();
-    std::string calculateShasum(const char* path);
     int createPackageList();
-    bool loadPackageList(std::map<std::string, std::string>* pkgCaches);
+    bool loadPackageList(std::map<std::string, PackageInfo>* pkgInfos);
     int addInfoToPackageList(const PackageInfo& installInfo);
     int addInfoToPackageList(const std::vector<PackageInfo>& vecExtraInfo);
     int deleteInfoFromPackageList(const std::string& packageName);

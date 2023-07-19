@@ -18,15 +18,106 @@
 
 #include <utils/Log.h>
 
+#include <filesystem>
+
+#include "PackageInstaller.h"
+#include "PackageParser.h"
+#include "PackageUtils.h"
+
 namespace os {
 namespace pm {
+
+using std::filesystem::directory_iterator;
+using std::filesystem::exists;
+
+class PackageConfig {
+public:
+    void loadConfig() {
+        rapidjson::Document doc;
+        getDocument(PACKAGE_CFG, doc);
+        mPresetAppPath = getValue<std::string>(doc, "presetAppPath", "/system/app");
+        mInstalledPath = getValue<std::string>(doc, "installedPath", "/data/app");
+        mAppDataPath = getValue<std::string>(doc, "appDataPath", "/data/data");
+    }
+
+    std::string mPresetAppPath;
+    std::string mInstalledPath;
+    std::string mAppDataPath;
+};
+
+PackageManagerService::PackageManagerService() {
+    mConfig = new PackageConfig();
+    mInstaller = new PackageInstaller();
+    mParser = new PackageParser();
+    init();
+}
+
+PackageManagerService::~PackageManagerService() {
+    if (mConfig) {
+        delete mConfig;
+        mConfig = nullptr;
+    }
+    if (mParser) {
+        delete mParser;
+        mParser = nullptr;
+    }
+    if (mInstaller) {
+        delete mInstaller;
+        mInstaller = nullptr;
+    }
+}
+
+void PackageManagerService::init() {
+    mConfig->loadConfig();
+    // create and scan manifest
+    if (!exists(PACKAGE_LIST_PATH)) {
+        mInstaller->createPackageList();
+        std::vector<PackageInfo> vecPackageInfo;
+        for (const auto &entry : directory_iterator(mConfig->mPresetAppPath.c_str())) {
+            if (entry.is_directory()) {
+                PackageInfo pkgInfo;
+                pkgInfo.manifest = joinPath(entry.path().string(), MANIFEST);
+                int ret = mParser->parseManifest(&pkgInfo);
+                if (!ret) {
+                    pkgInfo.userId = mInstaller->createUserId();
+                    mPackageInfo.insert(std::make_pair(pkgInfo.packageName, pkgInfo));
+                    vecPackageInfo.push_back(pkgInfo);
+                }
+            }
+        }
+        mInstaller->addInfoToPackageList(vecPackageInfo);
+    } else {
+        mInstaller->loadPackageList(&mPackageInfo);
+    }
+}
+
 Status PackageManagerService::getAllPackageInfo(std::vector<PackageInfo> *pkgInfos) {
-    // TODO
+    for (auto it = mPackageInfo.begin(); it != mPackageInfo.end(); it++) {
+        if (it->second.bAllValid) {
+            pkgInfos->push_back(it->second);
+        } else {
+            int ret = mParser->parseManifest(&it->second);
+            if (!ret) {
+                pkgInfos->push_back(it->second);
+            }
+        }
+    }
     return Status::ok();
 }
 
 Status PackageManagerService::getPackageInfo(const std::string &packageName, PackageInfo *pkgInfo) {
-    // TODO
+    if (mPackageInfo.find(packageName) == mPackageInfo.end()) {
+        return Status::fromExceptionCode(Status::EX_SERVICE_SPECIFIC);
+    }
+
+    if (!mPackageInfo[packageName].bAllValid) {
+        int ret = mParser->parseManifest(&mPackageInfo[packageName]);
+        if (ret) {
+            return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
+        }
+    }
+
+    *pkgInfo = mPackageInfo[packageName];
     return Status::ok();
 }
 
