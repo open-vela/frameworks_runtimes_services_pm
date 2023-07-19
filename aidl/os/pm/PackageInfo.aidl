@@ -37,4 +37,5 @@ parcelable PackageInfo {
     @nullable QuickAppInfo extra;
     int userId;
     long size;
+    boolean bAllValid;
 }

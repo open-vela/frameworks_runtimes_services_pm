@@ -143,5 +143,10 @@ std::string toPrettyString(const rapidjson::Document &doc) {
     return buffer.GetString();
 }
 
+std::string calculateShasum(const char *path) {
+    // TODO
+    return "";
+}
+
 } // namespace pm
 } // namespace os
