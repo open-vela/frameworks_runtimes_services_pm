@@ -27,8 +27,10 @@
 namespace os {
 namespace pm {
 
+using std::filesystem::copy_options;
 using std::filesystem::directory_iterator;
 using std::filesystem::exists;
+using std::filesystem::temp_directory_path;
 
 class PackageConfig {
 public:
@@ -128,17 +130,85 @@ Status PackageManagerService::clearAppCache(const std::string &packageName, int3
 
 Status PackageManagerService::installPackage(const InstallParam &param,
                                              const android::sp<IInstallObserver> &observer) {
-    // TODO
-    if (observer) {
-        observer->onInstallProcess("", 100);
-        observer->onInstallResult("", 0, "success");
+    size_t pos = param.path.find_last_of('/');
+    std::string rpkFullName = param.path;
+    if (pos != std::string::npos) {
+        rpkFullName = param.path.substr(pos + 1);
     }
+    pos = rpkFullName.rfind('.');
+    std::string rpkName = rpkFullName.substr(0, pos);
+    std::string dstPath = joinPath(mConfig->mInstalledPath, rpkName);
+    std::string tmp = joinPath(temp_directory_path().string(), rpkName);
+
+    int ret = mInstaller->installApp(param);
+    if (ret) {
+        observer->onInstallResult(param.path, ret, "Failed to deal with rpkpackage");
+        ALOGE("decompress %s failed", param.path.c_str());
+        return Status::fromExceptionCode(Status::EX_ILLEGAL_STATE);
+    }
+
+    PackageInfo packageinfo;
+    packageinfo.manifest = joinPath(tmp, MANIFEST);
+    ret = mParser->parseManifest(&packageinfo);
+    if (ret) {
+        ALOGE("parse manifest failed");
+        observer->onInstallResult(packageinfo.packageName, ret, "Failed to parse manifest");
+        return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
+    }
+
+    if (exists(dstPath.c_str())) {
+        removeDirectory(dstPath.c_str());
+    }
+
+    if (!createDirectory(dstPath.c_str())) {
+        observer->onInstallResult(packageinfo.packageName, android::PERMISSION_DENIED,
+                                  "Failed to create Directory");
+        ALOGE("create directory %s failed", dstPath.c_str());
+        return Status::fromExceptionCode(Status::EX_SERVICE_SPECIFIC);
+    }
+
+    std::error_code ec;
+    copy(tmp, dstPath, copy_options::recursive, ec);
+    if (ec) {
+        observer->onInstallResult(packageinfo.packageName, ret, "Failed to create Directory");
+        ALOGE("Copy from %s to %s Failed:%s", tmp.c_str(), dstPath.c_str(), ec.message().c_str());
+        return Status::fromExceptionCode(Status::EX_SECURITY);
+    }
+    removeDirectory(tmp.c_str());
+
+    packageinfo.installedPath = dstPath;
+    packageinfo.manifest = joinPath(dstPath, MANIFEST);
+    if (mPackageInfo.find(packageinfo.packageName) != mPackageInfo.end()) {
+        packageinfo.userId = mPackageInfo[packageinfo.packageName].userId;
+        mPackageInfo.erase(packageinfo.packageName);
+        mInstaller->deleteInfoFromPackageList(packageinfo.packageName);
+    }
+    mPackageInfo.insert(std::make_pair(packageinfo.packageName, packageinfo));
+    mInstaller->addInfoToPackageList(packageinfo);
+    observer->onInstallResult(packageinfo.packageName, 0, "success");
     return Status::ok();
 }
 
 Status PackageManagerService::uninstallPackage(const UninstallParam &param,
                                                const android::sp<IUninstallObserver> &observer) {
-    // TODO
+    if (mPackageInfo.find(param.packageName) == mPackageInfo.end()) {
+        if (observer) {
+            observer->onUninstallResult(param.packageName, android::NAME_NOT_FOUND,
+                                        "Not found package");
+        }
+        return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
+    }
+
+    if (!removeDirectory(mPackageInfo[param.packageName].installedPath.c_str())) {
+        if (observer) {
+            observer->onUninstallResult(param.packageName, android::PERMISSION_DENIED,
+                                        "Delete Directory Failed");
+        }
+        return Status::fromExceptionCode(Status::EX_UNSUPPORTED_OPERATION);
+    }
+
+    mPackageInfo.erase(param.packageName);
+    mInstaller->deleteInfoFromPackageList(param.packageName);
     if (observer) {
         observer->onUninstallResult(param.packageName, 0, "success");
     }
