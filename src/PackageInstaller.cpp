@@ -20,28 +20,75 @@
 #include <utils/Log.h>
 #include <uv_ext.h>
 
+#include <filesystem>
+
 #include "PackageUtils.h"
 
 namespace os {
 namespace pm {
+
+using std::filesystem::copy;
+using std::filesystem::exists;
+using std::filesystem::temp_directory_path;
 
 int32_t PackageInstaller::createUserId() {
     // TODO
     return 0;
 }
 
-int PackageInstaller::installApp(const std::string &srcPath, const std::string &dstPath) {
+int PackageInstaller::installApp(const InstallParam &param) {
+    size_t pos = param.path.find_last_of('.');
+    std::string suffix;
+    if (pos != std::string::npos) {
+        suffix = param.path.substr(pos + 1);
+        if (suffix == "rpk") {
+            return installQuickApp(param);
+        }
+    }
+    return installNativeApp(param);
+}
+
+int PackageInstaller::installNativeApp(const InstallParam &param) {
     // TODO
     return 0;
 }
 
-int PackageInstaller::installNativeApp(const std::string &srcPath, const std::string &dstPath) {
-    // TODO
-    return 0;
-}
+int PackageInstaller::installQuickApp(const InstallParam &param) {
+    size_t pos = param.path.find_last_of('/');
+    std::string rpkFullName = param.path;
+    if (pos != std::string::npos) {
+        rpkFullName = param.path.substr(pos + 1);
+    }
+    pos = rpkFullName.rfind('.');
+    std::string rpkName = rpkFullName.substr(0, pos);
 
-int PackageInstaller::installQuickApp(const std::string &srcPath, const std::string &dstPath) {
-    // TODO
+    if (!exists(param.path.c_str())) {
+        ALOGE("%s is not exist", param.path.c_str());
+        return android::NAME_NOT_FOUND;
+    }
+
+    std::string tmp = temp_directory_path().string();
+    tmp = joinPath(tmp, rpkName);
+    if (!createDirectory(tmp.c_str())) {
+        ALOGE("create tmp path:%s failed", tmp.c_str());
+        return android::PERMISSION_DENIED;
+    }
+
+    auto *token = app_verify_init(param.path.c_str(), tmp.c_str());
+    if (!token) {
+        ALOGE("app_verify_init failed");
+        removeDirectory(tmp.c_str());
+        return android::NO_INIT;
+    }
+
+    int ret = app_verify_unzip(token);
+    if (ret) {
+        app_verify_close(token);
+        removeDirectory(tmp.c_str());
+        return android::NO_INIT;
+    }
+
+    app_verify_close(token);
     return 0;
 }
 

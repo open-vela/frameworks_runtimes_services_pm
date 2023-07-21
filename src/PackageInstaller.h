@@ -18,6 +18,8 @@
 
 #include <vector>
 
+#include "os/pm/IInstallObserver.h"
+#include "os/pm/InstallParam.h"
 #include "os/pm/PackageInfo.h"
 
 namespace os {
@@ -25,7 +27,7 @@ namespace pm {
 
 class PackageInstaller {
 public:
-    int installApp(const std::string& srcPath, const std::string& dstPath);
+    int installApp(const InstallParam& param);
     int32_t createUserId();
     int createPackageList();
     bool loadPackageList(std::map<std::string, PackageInfo>* pkgInfos);
@@ -34,8 +36,8 @@ public:
     int deleteInfoFromPackageList(const std::string& packageName);
 
 private:
-    int installNativeApp(const std::string& srcPath, const std::string& dstPath);
-    int installQuickApp(const std::string& srcPath, const std::string& dstPath);
+    int installNativeApp(const InstallParam& param);
+    int installQuickApp(const InstallParam& param);
 };
 } // namespace pm
 } // namespace os
