@@ -48,22 +48,36 @@ int PackageParser::parseManifest(PackageInfo *info) {
     }
     info->name = getValue<std::string>(document, "name", "");
     info->icon = getValue<std::string>(document, "icon", "");
-    info->bAllValid = true;
 
     switch (getApplicationType(info->appType)) {
         case ApplicationType::NATIVE:
-            return parseNativeManifest(document, info);
+            ret = parseNativeManifest(document, info);
+            break;
         case ApplicationType::QUICKAPP:
-            return parseQuickAppManifest(document, info);
+            ret = parseQuickAppManifest(document, info);
+            break;
         default:
-            return -1;
+            ret = android::BAD_TYPE;
     }
+
+    if (!ret) {
+        info->bAllValid = true;
+    }
+    return ret;
 }
 
 int PackageParser::parseNativeManifest(const rapidjson::Document &document, PackageInfo *info) {
     if (info == nullptr) return android::NO_INIT;
     info->entry = getValue<std::string>(document, "entry", "");
+    if (info->entry.empty()) {
+        ALOGE("Failed parse manifest entry field");
+        return android::BAD_VALUE;
+    }
     info->execfile = getValue<std::string>(document, "execfile", "");
+    if (info->execfile.empty()) {
+        ALOGE("Failed parse manifest execfile field");
+        return android::BAD_VALUE;
+    }
     const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
     const rapidjson::Value baseObject = rapidjson::Value(rapidjson::kObjectType);
     const rapidjson::Value &activityArray =
@@ -71,7 +85,11 @@ int PackageParser::parseNativeManifest(const rapidjson::Document &document, Pack
     for (size_t i = 0; i < activityArray.Size(); i++) {
         ActivityInfo activiyInfo;
         activiyInfo.name = getValue<std::string>(activityArray[i], "name", "");
-        activiyInfo.launchMode = getValue<std::string>(activityArray[i], "launchMode", "");
+        if (activiyInfo.name.empty()) {
+            ALOGE("Failed parse manifest activities.name field");
+            return android::BAD_VALUE;
+        }
+        activiyInfo.launchMode = getValue<std::string>(activityArray[i], "launchMode", "standard");
         activiyInfo.taskAffinity =
                 getValue<std::string>(activityArray[i], "taskAffinity", info->packageName);
         const rapidjson::Value &intent =
