@@ -38,7 +38,7 @@ int PackageManager::getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo) {
     }
     Status status = mService->getAllPackageInfo(pkgsInfo);
     if (!status.isOk()) {
-        ALOGE("getAllPackageInfo failed:%s\n", status.toString8().c_str());
+        ALOGE("getAllPackageInfo failed:%s", status.toString8().c_str());
     }
     return status.exceptionCode();
 }
@@ -49,10 +49,9 @@ int PackageManager::getPackageInfo(const std::string &packageName, PackageInfo *
     }
     Status status = mService->getPackageInfo(packageName, info);
     if (!status.isOk()) {
-        ALOGE("getPackageInfo failed:%s\n", status.toString8().c_str());
+        ALOGE("getPackageInfo failed:%s", status.toString8().c_str());
     }
     return status.exceptionCode();
-    ;
 }
 
 int PackageManager::clearAppCache(const std::string &packageName) {
@@ -62,7 +61,7 @@ int PackageManager::clearAppCache(const std::string &packageName) {
     int32_t ret;
     Status status = mService->clearAppCache(packageName, &ret);
     if (!status.isOk()) {
-        ALOGE("clearAppCache failed:%s\n", status.toString8().c_str());
+        ALOGE("clearAppCache failed:%s", status.toString8().c_str());
         return status.exceptionCode();
     }
     return ret;
@@ -74,7 +73,7 @@ int PackageManager::installPackage(const InstallParam &param, sp<BnInstallObserv
     }
     Status status = mService->installPackage(param, listener);
     if (!status.isOk()) {
-        ALOGE("installPackage failed:%s\n", status.toString8().c_str());
+        ALOGE("installPackage failed:%s", status.toString8().c_str());
     }
     return status.exceptionCode();
 }
@@ -86,7 +85,7 @@ int PackageManager::uninstallPackage(const UninstallParam &param,
     }
     Status status = mService->uninstallPackage(param, listener);
     if (!status.isOk()) {
-        ALOGE("uninstallPackage failed:%s\n", status.toString8().c_str());
+        ALOGE("uninstallPackage failed:%s", status.toString8().c_str());
     }
     return status.exceptionCode();
 }
