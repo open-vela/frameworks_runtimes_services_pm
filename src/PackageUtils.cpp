@@ -59,7 +59,7 @@ bool createDirectory(const char *path) {
     error_code ec;
     bool ret = create_directories(path, ec);
     if (ec) {
-        ALOGE("Failed create directory %s:%s\n", path, ec.message().c_str());
+        ALOGE("Failed create directory %s:%s", path, ec.message().c_str());
         return ret;
     }
     return ret;
