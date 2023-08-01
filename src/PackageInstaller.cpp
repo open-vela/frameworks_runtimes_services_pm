@@ -152,9 +152,9 @@ int PackageInstaller::addInfoToPackageList(const std::vector<PackageInfo> &vecPa
             getValue<const rapidjson::Value &>(document, "packages", baseArray);
     rapidjson::Value &packagesArray = const_cast<rapidjson::Value &>(cpackagesArray);
     rapidjson::Document::AllocatorType &allocator = document.GetAllocator();
-    rapidjson::Value info(rapidjson::kObjectType);
-    rapidjson::Value strval(rapidjson::kStringType);
     for (auto &packageInfo : vecPackageInfo) {
+        rapidjson::Value info(rapidjson::kObjectType);
+        rapidjson::Value strval(rapidjson::kStringType);
         info.AddMember("package",
                        strval.SetString(packageInfo.packageName.c_str(),
                                         packageInfo.packageName.length(), allocator),
