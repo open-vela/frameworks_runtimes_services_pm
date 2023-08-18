@@ -90,6 +90,14 @@ int readFile(const char *filename, std::string &content) {
 }
 
 int writeFile(const char *filename, const std::string &data) {
+    std::filesystem::path fullPath(filename);
+    std::filesystem::path parent = fullPath.parent_path();
+    if (!exists(parent)) {
+        if (!createDirectory(parent.string().c_str())) {
+            ALOGE("writeFile failed at create parent directory:%s", parent.string().c_str());
+            return android::PERMISSION_DENIED;
+        }
+    }
     ofstream file(filename);
     if (!file) {
         ALOGE("Failed to open file %s", filename);

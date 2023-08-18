@@ -26,16 +26,22 @@ namespace os {
 namespace pm {
 
 using namespace android;
+using android::String8;
 using android::binder::Status;
+
+#define ASSERT_SERVICE(cond)                                   \
+    if (cond) {                                                \
+        ALOGE("ServiceManager can't find the service:%s",      \
+              String8(PackageManagerService::name()).c_str()); \
+        return DEAD_OBJECT;                                    \
+    }
 
 PackageManager::PackageManager() {
     android::getService<IPackageManager>(PackageManagerService::name(), &mService);
 }
 
 int32_t PackageManager::getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo) {
-    if (mService == nullptr) {
-        return DEAD_OBJECT;
-    }
+    ASSERT_SERVICE(mService == nullptr);
     Status status = mService->getAllPackageInfo(pkgsInfo);
     if (!status.isOk()) {
         ALOGE("getAllPackageInfo failed:%s", status.toString8().c_str());
@@ -44,9 +50,7 @@ int32_t PackageManager::getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo) {
 }
 
 int32_t PackageManager::getPackageInfo(const std::string &packageName, PackageInfo *info) {
-    if (mService == nullptr) {
-        return DEAD_OBJECT;
-    }
+    ASSERT_SERVICE(mService == nullptr);
     Status status = mService->getPackageInfo(packageName, info);
     if (!status.isOk()) {
         ALOGE("getPackageInfo failed:%s", status.toString8().c_str());
@@ -55,9 +59,7 @@ int32_t PackageManager::getPackageInfo(const std::string &packageName, PackageIn
 }
 
 int32_t PackageManager::clearAppCache(const std::string &packageName) {
-    if (mService == nullptr) {
-        return DEAD_OBJECT;
-    }
+    ASSERT_SERVICE(mService == nullptr);
     int32_t ret;
     Status status = mService->clearAppCache(packageName, &ret);
     if (!status.isOk()) {
@@ -68,9 +70,7 @@ int32_t PackageManager::clearAppCache(const std::string &packageName) {
 }
 
 int32_t PackageManager::installPackage(const InstallParam &param, sp<BnInstallObserver> listener) {
-    if (mService == nullptr) {
-        return DEAD_OBJECT;
-    }
+    ASSERT_SERVICE(mService == nullptr);
     Status status = mService->installPackage(param, listener);
     if (!status.isOk()) {
         ALOGE("installPackage failed:%s", status.toString8().c_str());
@@ -80,9 +80,7 @@ int32_t PackageManager::installPackage(const InstallParam &param, sp<BnInstallOb
 
 int32_t PackageManager::uninstallPackage(const UninstallParam &param,
                                          sp<BnUninstallObserver> listener) {
-    if (mService == nullptr) {
-        return DEAD_OBJECT;
-    }
+    ASSERT_SERVICE(mService == nullptr);
     Status status = mService->uninstallPackage(param, listener);
     if (!status.isOk()) {
         ALOGE("uninstallPackage failed:%s", status.toString8().c_str());

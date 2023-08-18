@@ -83,9 +83,11 @@ int PmCommand::runInstall() {
     InstallParam installparam;
     installparam.path = path;
     sp<InstallListener> listener = sp<InstallListener>::make(*this);
-    pm.installPackage(installparam, listener);
-    wait();
-    return 0;
+    int status = pm.installPackage(installparam, listener);
+    if (!status) {
+        wait();
+    }
+    return status;
 }
 
 static std::string dumpPackageInfo(const PackageInfo &info) {
@@ -155,9 +157,11 @@ int PmCommand::runUninstall() {
     UninstallParam uninstallparam;
     uninstallparam.packageName = packageName;
     sp<UninstallListener> listener = sp<UninstallListener>::make(*this);
-    pm.uninstallPackage(uninstallparam, listener);
-    wait();
-    return 0;
+    int status = pm.uninstallPackage(uninstallparam, listener);
+    if (!status) {
+        wait();
+    }
+    return status;
 }
 
 int PmCommand::runList() {
