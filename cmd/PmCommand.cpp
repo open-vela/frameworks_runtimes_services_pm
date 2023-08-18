@@ -88,6 +88,65 @@ int PmCommand::runInstall() {
     return 0;
 }
 
+static std::string dumpPackageInfo(const PackageInfo &info) {
+    std::ostringstream oss;
+    oss << "{" << std::endl;
+    oss << "\033[33m"
+        << "  package: " << info.packageName << "\033[0m" << std::endl;
+    oss << "  name: " << info.name << std::endl;
+    oss << "  appType: " << info.appType << std::endl;
+    oss << "  bAllValid: " << (info.bAllValid ? "true" : "false") << std::endl;
+    oss << "  installPath: " << info.installedPath << std::endl;
+    oss << "  manifest: " << info.manifest << std::endl;
+    oss << "  versionName: " << info.version << std::endl;
+    oss << "  icon: " << info.icon << std::endl;
+    oss << "  execfile: " << info.execfile << std::endl;
+    oss << "  entry: " << info.entry << std::endl;
+    oss << "  installTime: " << info.installTime << std::endl;
+    oss << "  shasum: " << info.shasum << std::endl;
+    oss << "  userId: " << info.userId << std::endl;
+    oss << "  size: " << info.size << std::endl;
+    oss << "  activities:[" << std::endl;
+    for (auto &activity : info.activitiesInfo) {
+        oss << "     {" << std::endl;
+        oss << "\tname: " << activity.name << std::endl;
+        oss << "\tlaunchMode: " << activity.launchMode << std::endl;
+        oss << "\ttaskAffinity: " << activity.taskAffinity << std::endl;
+        oss << "\tactions:[" << std::endl;
+        for (auto &action : activity.actions) {
+            oss << "\t  " << action << std::endl;
+        }
+        oss << "\t]" << std::endl;
+        oss << "     }" << std::endl;
+    }
+    oss << "  ]" << std::endl;
+    oss << "  services:[" << std::endl;
+    for (auto &service : info.servicesInfo) {
+        oss << "     {" << std::endl;
+        oss << "\tname: " << service.name << std::endl;
+        oss << "\texported:" << service.exported << std::endl;
+        oss << "\tactions:[" << std::endl;
+        for (auto &action : service.actions) {
+            oss << "\t  " << action << std::endl;
+        }
+        oss << "\t]" << std::endl;
+        oss << "     }" << std::endl;
+    }
+    oss << "  ]" << std::endl;
+    if (info.extra.has_value()) {
+        QuickAppInfo quickappInfo = info.extra.value();
+        oss << "  versionCode: " << quickappInfo.versionCode << std::endl;
+        oss << "  features: [" << std::endl;
+        for (auto &feature : quickappInfo.features) {
+            oss << "    " << feature << std::endl;
+        }
+        oss << "  ]" << std::endl;
+        oss << "  router:" << quickappInfo.router.toString() << std::endl;
+    }
+    oss << "}";
+    return oss.str();
+}
+
 int PmCommand::runUninstall() {
     std::string_view packageName = nextArg();
     if (packageName.empty()) {
@@ -105,7 +164,7 @@ int PmCommand::runList() {
     std::vector<PackageInfo> pkgInfos;
     int status = pm.getAllPackageInfo(&pkgInfos);
     for (size_t i = 0; i < pkgInfos.size(); i++) {
-        printf("%s\n", pkgInfos[i].toString().c_str());
+        printf("%s\n", dumpPackageInfo(pkgInfos[i]).c_str());
     }
     return status;
 }
@@ -129,7 +188,7 @@ int PmCommand::runGetPackage() {
     PackageInfo pkginfo;
     int status = pm.getPackageInfo(std::string(packageName), &pkginfo);
     if (!status) {
-        printf("%s\n", pkginfo.toString().c_str());
+        printf("%s\n", dumpPackageInfo(pkginfo).c_str());
     } else {
         printf("get %.*s failed\n", static_cast<int>(packageName.length()), packageName.data());
     }
@@ -137,11 +196,12 @@ int PmCommand::runGetPackage() {
 }
 
 int PmCommand::showUsage() {
-    printf("pm install PATH\n");
-    printf("pm uninstall PACKAGE\n");
-    printf("pm clear PACKAGE\n");
-    printf("pm list\n");
-    printf("pm get PACKAGE\n");
+    printf("usage: pm [subcommand] [options]\n\n");
+    printf("  pm install PATH\n");
+    printf("  pm uninstall PACKAGE\n");
+    printf("  pm clear PACKAGE\n");
+    printf("  pm list\n");
+    printf("  pm get PACKAGE\n");
     return 0;
 }
 
