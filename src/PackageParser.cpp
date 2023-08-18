@@ -35,7 +35,7 @@ int PackageParser::parseManifest(PackageInfo *info) {
     if (info->packageName.empty()) {
         info->packageName = getValue<std::string>(document, "package", "");
         if (info->packageName.empty()) {
-            ALOGE("Failed parse manifest package field");
+            ALOGE("Failed parse manifest:%s package field", info->manifest.c_str());
             return android::BAD_VALUE;
         }
         info->appType = getValue<std::string>(document, "appType", "QUICKAPP");
@@ -70,12 +70,12 @@ int PackageParser::parseNativeManifest(const rapidjson::Document &document, Pack
     if (info == nullptr) return android::NO_INIT;
     info->entry = getValue<std::string>(document, "entry", "");
     if (info->entry.empty()) {
-        ALOGE("Failed parse manifest entry field");
+        ALOGE("Failed parse manifest:%s entry field", info->manifest.c_str());
         return android::BAD_VALUE;
     }
     info->execfile = getValue<std::string>(document, "execfile", "");
     if (info->execfile.empty()) {
-        ALOGE("Failed parse manifest execfile field");
+        ALOGE("Failed parse manifest:%s execfile field", info->manifest.c_str());
         return android::BAD_VALUE;
     }
     const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
@@ -86,7 +86,7 @@ int PackageParser::parseNativeManifest(const rapidjson::Document &document, Pack
         ActivityInfo activiyInfo;
         activiyInfo.name = getValue<std::string>(activityArray[i], "name", "");
         if (activiyInfo.name.empty()) {
-            ALOGE("Failed parse manifest activities.name field");
+            ALOGE("Failed parse manifest:%s activities.name field", info->manifest.c_str());
             return android::BAD_VALUE;
         }
         activiyInfo.launchMode = getValue<std::string>(activityArray[i], "launchMode", "standard");

@@ -70,7 +70,6 @@ int PackageInstaller::installQuickApp(const InstallParam &param) {
     std::string tmp = temp_directory_path().string();
     tmp = joinPath(tmp, rpkName);
     if (!createDirectory(tmp.c_str())) {
-        ALOGE("create tmp path:%s failed", tmp.c_str());
         return android::PERMISSION_DENIED;
     }
 
