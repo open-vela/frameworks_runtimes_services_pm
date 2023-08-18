@@ -32,7 +32,7 @@ PackageManager::PackageManager() {
     android::getService<IPackageManager>(PackageManagerService::name(), &mService);
 }
 
-int PackageManager::getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo) {
+int32_t PackageManager::getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo) {
     if (mService == nullptr) {
         return DEAD_OBJECT;
     }
@@ -43,7 +43,7 @@ int PackageManager::getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo) {
     return status.exceptionCode();
 }
 
-int PackageManager::getPackageInfo(const std::string &packageName, PackageInfo *info) {
+int32_t PackageManager::getPackageInfo(const std::string &packageName, PackageInfo *info) {
     if (mService == nullptr) {
         return DEAD_OBJECT;
     }
@@ -54,7 +54,7 @@ int PackageManager::getPackageInfo(const std::string &packageName, PackageInfo *
     return status.exceptionCode();
 }
 
-int PackageManager::clearAppCache(const std::string &packageName) {
+int32_t PackageManager::clearAppCache(const std::string &packageName) {
     if (mService == nullptr) {
         return DEAD_OBJECT;
     }
@@ -67,7 +67,7 @@ int PackageManager::clearAppCache(const std::string &packageName) {
     return ret;
 }
 
-int PackageManager::installPackage(const InstallParam &param, sp<BnInstallObserver> listener) {
+int32_t PackageManager::installPackage(const InstallParam &param, sp<BnInstallObserver> listener) {
     if (mService == nullptr) {
         return DEAD_OBJECT;
     }
@@ -78,8 +78,8 @@ int PackageManager::installPackage(const InstallParam &param, sp<BnInstallObserv
     return status.exceptionCode();
 }
 
-int PackageManager::uninstallPackage(const UninstallParam &param,
-                                     sp<BnUninstallObserver> listener) {
+int32_t PackageManager::uninstallPackage(const UninstallParam &param,
+                                         sp<BnUninstallObserver> listener) {
     if (mService == nullptr) {
         return DEAD_OBJECT;
     }
