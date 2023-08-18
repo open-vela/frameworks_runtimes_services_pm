@@ -96,10 +96,12 @@ void PackageManagerService::init() {
 Status PackageManagerService::getAllPackageInfo(std::vector<PackageInfo> *pkgInfos) {
     for (auto it = mPackageInfo.begin(); it != mPackageInfo.end(); it++) {
         if (it->second.bAllValid) {
+            ALOGD("getAllPackageInfo:%s", it->second.toString().c_str());
             pkgInfos->push_back(it->second);
         } else {
             int ret = mParser->parseManifest(&it->second);
             if (!ret) {
+                ALOGD("getAllPackageInfo:%s", it->second.toString().c_str());
                 pkgInfos->push_back(it->second);
             }
         }
@@ -108,7 +110,9 @@ Status PackageManagerService::getAllPackageInfo(std::vector<PackageInfo> *pkgInf
 }
 
 Status PackageManagerService::getPackageInfo(const std::string &packageName, PackageInfo *pkgInfo) {
+    ALOGD("getPackageInfo package:%s", packageName.c_str());
     if (mPackageInfo.find(packageName) == mPackageInfo.end()) {
+        ALOGE("getPackageInfo package:%s can't find", packageName.c_str());
         return Status::fromExceptionCode(Status::EX_SERVICE_SPECIFIC);
     }
 
@@ -118,18 +122,20 @@ Status PackageManagerService::getPackageInfo(const std::string &packageName, Pac
             return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
         }
     }
-
     *pkgInfo = mPackageInfo[packageName];
+    ALOGD("packageInfo: %s", pkgInfo->toString().c_str());
     return Status::ok();
 }
 
 Status PackageManagerService::clearAppCache(const std::string &packageName, int32_t *ret) {
     // TODO
+    *ret = 0;
     return Status::ok();
 }
 
 Status PackageManagerService::installPackage(const InstallParam &param,
                                              const android::sp<IInstallObserver> &observer) {
+    ALOGD("installPackage:%s", param.toString().c_str());
     size_t pos = param.path.find_last_of('/');
     std::string rpkFullName = param.path;
     if (pos != std::string::npos) {
@@ -151,7 +157,7 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     packageinfo.manifest = joinPath(tmp, MANIFEST);
     ret = mParser->parseManifest(&packageinfo);
     if (ret) {
-        ALOGE("parse manifest failed");
+        ALOGE("parse manifest:%s failed\n", packageinfo.manifest.c_str());
         observer->onInstallResult(packageinfo.packageName, ret, "Failed to parse manifest");
         return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
     }
@@ -191,11 +197,13 @@ Status PackageManagerService::installPackage(const InstallParam &param,
 
 Status PackageManagerService::uninstallPackage(const UninstallParam &param,
                                                const android::sp<IUninstallObserver> &observer) {
+    ALOGD("uninstallPackage:%s\n", param.toString().c_str());
     if (mPackageInfo.find(param.packageName) == mPackageInfo.end()) {
         if (observer) {
             observer->onUninstallResult(param.packageName, android::NAME_NOT_FOUND,
                                         "Not found package");
         }
+        ALOGE("uninstallPackage package:%s can't find", param.packageName.c_str());
         return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
     }
 
@@ -204,6 +212,7 @@ Status PackageManagerService::uninstallPackage(const UninstallParam &param,
             observer->onUninstallResult(param.packageName, android::PERMISSION_DENIED,
                                         "Delete Directory Failed");
         }
+        ALOGE("Delete Directory:%s Failed", mPackageInfo[param.packageName].installedPath.c_str());
         return Status::fromExceptionCode(Status::EX_UNSUPPORTED_OPERATION);
     }
 
