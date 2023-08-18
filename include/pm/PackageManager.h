@@ -28,11 +28,12 @@ using android::sp;
 class PackageManager {
 public:
     PackageManager();
-    int getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo);
-    int getPackageInfo(const std::string &packageName, PackageInfo *info);
-    int clearAppCache(const std::string &packageName);
-    int installPackage(const InstallParam &param, sp<BnInstallObserver> listener = nullptr);
-    int uninstallPackage(const UninstallParam &param, sp<BnUninstallObserver> listener = nullptr);
+    int32_t getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo);
+    int32_t getPackageInfo(const std::string &packageName, PackageInfo *info);
+    int32_t clearAppCache(const std::string &packageName);
+    int32_t installPackage(const InstallParam &param, sp<BnInstallObserver> listener = nullptr);
+    int32_t uninstallPackage(const UninstallParam &param,
+                             sp<BnUninstallObserver> listener = nullptr);
 
 private:
     sp<IPackageManager> mService;
