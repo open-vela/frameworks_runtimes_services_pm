@@ -163,7 +163,7 @@ int PackageInstaller::addInfoToPackageList(const std::vector<PackageInfo> &vecPa
                        strval.SetString(packageInfo.appType.c_str(), packageInfo.appType.length(),
                                         allocator),
                        allocator);
-        info.AddMember("uid", packageInfo.userId, allocator);
+        info.AddMember("uid", static_cast<int>(packageInfo.userId), allocator);
         info.AddMember("installedTime",
                        strval.SetString(packageInfo.installTime.c_str(),
                                         packageInfo.installTime.length(), allocator),
