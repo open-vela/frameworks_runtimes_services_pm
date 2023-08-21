@@ -20,6 +20,7 @@
 
 #include <filesystem>
 
+#include "../system_server/BaseProfiler.h"
 #include "PackageInstaller.h"
 #include "PackageParser.h"
 #include "PackageUtils.h"
@@ -70,6 +71,7 @@ PackageManagerService::~PackageManagerService() {
 }
 
 void PackageManagerService::init() {
+    PM_PROFILER_BEGIN();
     mConfig->loadConfig();
     // create and scan manifest
     if (!exists(PACKAGE_LIST_PATH)) {
@@ -91,9 +93,11 @@ void PackageManagerService::init() {
     } else {
         mInstaller->loadPackageList(&mPackageInfo);
     }
+    PM_PROFILER_END();
 }
 
 Status PackageManagerService::getAllPackageInfo(std::vector<PackageInfo> *pkgInfos) {
+    PM_PROFILER_BEGIN();
     for (auto it = mPackageInfo.begin(); it != mPackageInfo.end(); it++) {
         if (it->second.bAllValid) {
             ALOGD("getAllPackageInfo:%s", it->second.toString().c_str());
@@ -106,24 +110,29 @@ Status PackageManagerService::getAllPackageInfo(std::vector<PackageInfo> *pkgInf
             }
         }
     }
+    PM_PROFILER_END();
     return Status::ok();
 }
 
 Status PackageManagerService::getPackageInfo(const std::string &packageName, PackageInfo *pkgInfo) {
+    PM_PROFILER_BEGIN();
     ALOGD("getPackageInfo package:%s", packageName.c_str());
     if (mPackageInfo.find(packageName) == mPackageInfo.end()) {
         ALOGE("getPackageInfo package:%s can't find", packageName.c_str());
+        PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_SERVICE_SPECIFIC);
     }
 
     if (!mPackageInfo[packageName].bAllValid) {
         int ret = mParser->parseManifest(&mPackageInfo[packageName]);
         if (ret) {
+            PM_PROFILER_END();
             return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
         }
     }
     *pkgInfo = mPackageInfo[packageName];
     ALOGD("packageInfo: %s", pkgInfo->toString().c_str());
+    PM_PROFILER_END();
     return Status::ok();
 }
 
@@ -135,6 +144,7 @@ Status PackageManagerService::clearAppCache(const std::string &packageName, int3
 
 Status PackageManagerService::installPackage(const InstallParam &param,
                                              const android::sp<IInstallObserver> &observer) {
+    PM_PROFILER_BEGIN();
     ALOGD("installPackage:%s", param.toString().c_str());
     size_t pos = param.path.find_last_of('/');
     std::string rpkFullName = param.path;
@@ -150,6 +160,7 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     if (ret) {
         observer->onInstallResult(param.path, ret, "Failed to deal with rpkpackage");
         ALOGE("decompress %s failed", param.path.c_str());
+        PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_ILLEGAL_STATE);
     }
 
@@ -159,6 +170,7 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     if (ret) {
         ALOGE("parse manifest:%s failed\n", packageinfo.manifest.c_str());
         observer->onInstallResult(packageinfo.packageName, ret, "Failed to parse manifest");
+        PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
     }
 
@@ -170,6 +182,7 @@ Status PackageManagerService::installPackage(const InstallParam &param,
         observer->onInstallResult(packageinfo.packageName, android::PERMISSION_DENIED,
                                   "Failed to create Directory");
         ALOGE("create directory %s failed", dstPath.c_str());
+        PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_SERVICE_SPECIFIC);
     }
 
@@ -178,6 +191,7 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     if (ec) {
         observer->onInstallResult(packageinfo.packageName, ret, "Failed to create Directory");
         ALOGE("Copy from %s to %s Failed:%s", tmp.c_str(), dstPath.c_str(), ec.message().c_str());
+        PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_SECURITY);
     }
     removeDirectory(tmp.c_str());
@@ -192,11 +206,13 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     mPackageInfo.insert(std::make_pair(packageinfo.packageName, packageinfo));
     mInstaller->addInfoToPackageList(packageinfo);
     observer->onInstallResult(packageinfo.packageName, 0, "success");
+    PM_PROFILER_END();
     return Status::ok();
 }
 
 Status PackageManagerService::uninstallPackage(const UninstallParam &param,
                                                const android::sp<IUninstallObserver> &observer) {
+    PM_PROFILER_BEGIN();
     ALOGD("uninstallPackage:%s\n", param.toString().c_str());
     if (mPackageInfo.find(param.packageName) == mPackageInfo.end()) {
         if (observer) {
@@ -204,6 +220,7 @@ Status PackageManagerService::uninstallPackage(const UninstallParam &param,
                                         "Not found package");
         }
         ALOGE("uninstallPackage package:%s can't find", param.packageName.c_str());
+        PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
     }
 
@@ -213,6 +230,7 @@ Status PackageManagerService::uninstallPackage(const UninstallParam &param,
                                         "Delete Directory Failed");
         }
         ALOGE("Delete Directory:%s Failed", mPackageInfo[param.packageName].installedPath.c_str());
+        PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_UNSUPPORTED_OPERATION);
     }
 
@@ -221,6 +239,7 @@ Status PackageManagerService::uninstallPackage(const UninstallParam &param,
     if (observer) {
         observer->onUninstallResult(param.packageName, 0, "success");
     }
+    PM_PROFILER_END();
     return Status::ok();
 }
 

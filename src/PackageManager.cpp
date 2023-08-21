@@ -20,6 +20,7 @@
 #include <binder/IServiceManager.h>
 #include <binder/ProcessState.h>
 
+#include "../system_server/BaseProfiler.h"
 #include "pm/PackageManagerService.h"
 
 namespace os {
@@ -42,49 +43,60 @@ PackageManager::PackageManager() {
 
 int32_t PackageManager::getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo) {
     ASSERT_SERVICE(mService == nullptr);
+    PM_PROFILER_BEGIN();
     Status status = mService->getAllPackageInfo(pkgsInfo);
     if (!status.isOk()) {
         ALOGE("getAllPackageInfo failed:%s", status.toString8().c_str());
     }
+    PM_PROFILER_END();
     return status.exceptionCode();
 }
 
 int32_t PackageManager::getPackageInfo(const std::string &packageName, PackageInfo *info) {
     ASSERT_SERVICE(mService == nullptr);
+    PM_PROFILER_BEGIN();
     Status status = mService->getPackageInfo(packageName, info);
     if (!status.isOk()) {
         ALOGE("getPackageInfo failed:%s", status.toString8().c_str());
     }
+    PM_PROFILER_END();
     return status.exceptionCode();
 }
 
 int32_t PackageManager::clearAppCache(const std::string &packageName) {
     ASSERT_SERVICE(mService == nullptr);
+    PM_PROFILER_BEGIN();
     int32_t ret;
     Status status = mService->clearAppCache(packageName, &ret);
     if (!status.isOk()) {
         ALOGE("clearAppCache failed:%s", status.toString8().c_str());
+        PM_PROFILER_END();
         return status.exceptionCode();
     }
+    PM_PROFILER_END();
     return ret;
 }
 
 int32_t PackageManager::installPackage(const InstallParam &param, sp<BnInstallObserver> listener) {
     ASSERT_SERVICE(mService == nullptr);
+    PM_PROFILER_BEGIN();
     Status status = mService->installPackage(param, listener);
     if (!status.isOk()) {
         ALOGE("installPackage failed:%s", status.toString8().c_str());
     }
+    PM_PROFILER_BEGIN();
     return status.exceptionCode();
 }
 
 int32_t PackageManager::uninstallPackage(const UninstallParam &param,
                                          sp<BnUninstallObserver> listener) {
     ASSERT_SERVICE(mService == nullptr);
+    PM_PROFILER_BEGIN();
     Status status = mService->uninstallPackage(param, listener);
     if (!status.isOk()) {
         ALOGE("uninstallPackage failed:%s", status.toString8().c_str());
     }
+    PM_PROFILER_BEGIN();
     return status.exceptionCode();
 }
 
