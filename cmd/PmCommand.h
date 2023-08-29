@@ -16,9 +16,6 @@
 
 #pragma once
 
-#include <condition_variable>
-#include <memory>
-#include <mutex>
 #include <string_view>
 
 #include "pm/PackageManager.h"
@@ -29,8 +26,6 @@ class PmCommand {
 public:
     PmCommand();
     ~PmCommand();
-    void wake();
-    void wait();
     int runInstall();
     int runUninstall();
     int runList();
@@ -45,8 +40,6 @@ private:
     size_t mNextArg;
     int mWaitNum;
     PackageManager pm;
-    std::condition_variable mCond;
-    std::mutex mMutex;
 };
 } // namespace pm
 } // namespace os
