@@ -20,16 +20,15 @@
 #include <inttypes.h>
 
 #include <cstdio>
+#include <future>
 
 namespace os {
 namespace pm {
 
 using android::binder::Status;
 
-class InstallListener : public BnInstallObserver {
+class InstallListener : public BnInstallObserver, public std::promise<int32_t> {
 public:
-    InstallListener(PmCommand &cmd) : mCmd(cmd) {}
-
     Status onInstallProcess(const std::string &packageName, int32_t process) override {
         printf("onInstallProcess %" PRIi32 "\n", process);
         return Status::ok();
@@ -38,42 +37,24 @@ public:
     Status onInstallResult(const std::string &packageName, int32_t code,
                            const std::string &msg) override {
         printf("onInstallResult: %s(%s %" PRIi32 ")\n", packageName.c_str(), msg.c_str(), code);
-        mCmd.wake();
+        this->set_value(code);
         return Status::ok();
     }
-
-private:
-    PmCommand &mCmd;
 };
 
-class UninstallListener : public BnUninstallObserver {
+class UninstallListener : public BnUninstallObserver, public std::promise<int32_t> {
 public:
-    UninstallListener(PmCommand &cmd) : mCmd(cmd) {}
-
     Status onUninstallResult(const std::string &packageName, int32_t code,
                              const std::string &msg) override {
         printf("onUninstallResult: %s(%s %" PRIi32 ")\n", packageName.c_str(), msg.c_str(), code);
-        mCmd.wake();
+        this->set_value(code);
         return Status::ok();
     }
-
-private:
-    PmCommand &mCmd;
 };
 
 PmCommand::PmCommand() : mNextArg(0) {}
 
 PmCommand::~PmCommand() {}
-
-void PmCommand::wake() {
-    std::unique_lock<std::mutex> lock(mMutex);
-    return mCond.notify_one();
-}
-
-void PmCommand::wait() {
-    std::unique_lock<std::mutex> lock(mMutex);
-    mCond.wait(lock);
-}
 
 int PmCommand::runInstall() {
     std::string_view path = nextArg();
@@ -82,12 +63,14 @@ int PmCommand::runInstall() {
     }
     InstallParam installparam;
     installparam.path = path;
-    sp<InstallListener> listener = sp<InstallListener>::make(*this);
+    sp<InstallListener> listener = sp<InstallListener>::make();
     int status = pm.installPackage(installparam, listener);
-    if (!status) {
-        wait();
+    if (status) {
+        return status;
     }
-    return status;
+    std::future<int32_t> f = listener->get_future();
+    int result = f.get();
+    return result;
 }
 
 static std::string dumpPackageInfo(const PackageInfo &info) {
@@ -156,12 +139,14 @@ int PmCommand::runUninstall() {
     }
     UninstallParam uninstallparam;
     uninstallparam.packageName = packageName;
-    sp<UninstallListener> listener = sp<UninstallListener>::make(*this);
+    sp<UninstallListener> listener = sp<UninstallListener>::make();
     int status = pm.uninstallPackage(uninstallparam, listener);
-    if (!status) {
-        wait();
+    if (status) {
+        return status;
     }
-    return status;
+    std::future<int32_t> f = listener->get_future();
+    int result = f.get();
+    return result;
 }
 
 int PmCommand::runList() {
