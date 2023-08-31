@@ -31,6 +31,7 @@ namespace pm {
 using std::filesystem::copy_options;
 using std::filesystem::directory_iterator;
 using std::filesystem::exists;
+using std::filesystem::remove;
 using std::filesystem::temp_directory_path;
 
 class PackageConfig {
@@ -86,6 +87,10 @@ void PackageManagerService::init() {
                     pkgInfo.userId = mInstaller->createUserId();
                     mPackageInfo.insert(std::make_pair(pkgInfo.packageName, pkgInfo));
                     vecPackageInfo.push_back(pkgInfo);
+                    std::string appDataPath = joinPath(mConfig->mAppDataPath, pkgInfo.packageName);
+                    if (!exists(appDataPath.c_str())) {
+                        createDirectory(appDataPath.c_str());
+                    }
                 }
             }
         }
@@ -137,8 +142,24 @@ Status PackageManagerService::getPackageInfo(const std::string &packageName, Pac
 }
 
 Status PackageManagerService::clearAppCache(const std::string &packageName, int32_t *ret) {
-    // TODO
+    PM_PROFILER_BEGIN();
+    ALOGD("clearAppCache package:%s", packageName.c_str());
+    *ret = Status::EX_ILLEGAL_ARGUMENT;
+    if (mPackageInfo.find(packageName) == mPackageInfo.end()) {
+        ALOGE("clearAppCache package:%s can't find", packageName.c_str());
+        PM_PROFILER_END();
+        return Status::ok();
+    }
+    for (const auto &entry :
+         directory_iterator(joinPath(mConfig->mAppDataPath, packageName).c_str())) {
+        if (entry.is_directory()) {
+            removeDirectory(entry.path().c_str());
+        } else {
+            remove(entry.path().c_str());
+        }
+    }
     *ret = 0;
+    PM_PROFILER_END();
     return Status::ok();
 }
 
@@ -195,6 +216,10 @@ Status PackageManagerService::installPackage(const InstallParam &param,
         return Status::fromExceptionCode(Status::EX_SECURITY);
     }
     removeDirectory(tmp.c_str());
+    std::string appDataPath = joinPath(mConfig->mAppDataPath, packageinfo.packageName);
+    if (!exists(appDataPath.c_str())) {
+        createDirectory(appDataPath.c_str());
+    }
 
     packageinfo.installedPath = dstPath;
     packageinfo.manifest = joinPath(dstPath, MANIFEST);
@@ -236,6 +261,9 @@ Status PackageManagerService::uninstallPackage(const UninstallParam &param,
 
     mPackageInfo.erase(param.packageName);
     mInstaller->deleteInfoFromPackageList(param.packageName);
+    if (param.clearCache) {
+        removeDirectory(joinPath(mConfig->mAppDataPath, param.packageName).c_str());
+    }
     if (observer) {
         observer->onUninstallResult(param.packageName, 0, "success");
     }
