@@ -133,12 +133,21 @@ static std::string dumpPackageInfo(const PackageInfo &info) {
 }
 
 int PmCommand::runUninstall() {
-    std::string_view packageName = nextArg();
+    UninstallParam uninstallparam;
+    std::string_view arg = nextArg();
+    std::string_view packageName;
+    if (arg == "-f") {
+        uninstallparam.clearCache = true;
+        packageName = nextArg();
+    } else {
+        packageName = arg;
+    }
+
     if (packageName.empty()) {
         return showUsage();
     }
-    UninstallParam uninstallparam;
     uninstallparam.packageName = packageName;
+
     sp<UninstallListener> listener = sp<UninstallListener>::make();
     int status = pm.uninstallPackage(uninstallparam, listener);
     if (status) {
@@ -187,7 +196,7 @@ int PmCommand::runGetPackage() {
 int PmCommand::showUsage() {
     printf("usage: pm [subcommand] [options]\n\n");
     printf("  pm install PATH\n");
-    printf("  pm uninstall PACKAGE\n");
+    printf("  pm uninstall [-f] PACKAGE\n");
     printf("  pm clear PACKAGE\n");
     printf("  pm list\n");
     printf("  pm get PACKAGE\n");
