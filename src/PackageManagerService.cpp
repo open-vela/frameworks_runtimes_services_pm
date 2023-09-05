@@ -271,5 +271,26 @@ Status PackageManagerService::uninstallPackage(const UninstallParam &param,
     return Status::ok();
 }
 
+Status PackageManagerService::getPackageSizeInfo(const std::string &packageName,
+                                                 PackageStats *pkgStats) {
+    PM_PROFILER_BEGIN();
+    if (mPackageInfo.find(packageName) == mPackageInfo.end()) {
+        ALOGE("getPackageSizeInfo package:%s can't find", packageName.c_str());
+        PM_PROFILER_END();
+        return Status::fromExceptionCode(Status::EX_SERVICE_SPECIFIC);
+        ;
+    }
+
+    PackageInfo pkgInfo = mPackageInfo[packageName];
+    std::string codePath = pkgInfo.installedPath;
+    std::string dataPath = joinPath(mConfig->mAppDataPath, packageName);
+    std::string cachePath = joinPath(dataPath, "cache");
+    pkgStats->codeSize = getDirectorySize(codePath.c_str());
+    pkgStats->dataSize = getDirectorySize(dataPath.c_str());
+    pkgStats->cacheSize = getDirectorySize(cachePath.c_str());
+    PM_PROFILER_END();
+    return Status::ok();
+}
+
 } // namespace pm
 } // namespace os

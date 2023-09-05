@@ -100,5 +100,16 @@ int32_t PackageManager::uninstallPackage(const UninstallParam &param,
     return status.exceptionCode();
 }
 
+int32_t PackageManager::getPackageSizeInfo(const std::string &packageName, PackageStats *stats) {
+    ASSERT_SERVICE(mService == nullptr);
+    PM_PROFILER_BEGIN();
+    Status status = mService->getPackageSizeInfo(packageName, stats);
+    if (!status.isOk()) {
+        ALOGE("getPackageStats failed:%s", status.toString8().c_str());
+    }
+    PM_PROFILER_BEGIN();
+    return status.exceptionCode();
+}
+
 } // namespace pm
 } // namespace os

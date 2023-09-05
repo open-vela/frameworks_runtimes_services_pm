@@ -110,6 +110,9 @@ int writeFile(const char *filename, const std::string &data) {
 
 int64_t getDirectorySize(const char *path) {
     int64_t totalSize = 0;
+    if (!exists(path)) {
+        return totalSize;
+    }
     std::filesystem::path folderPath = path;
     for (const auto &entry : recursive_directory_iterator(folderPath)) {
         if (is_regular_file(entry)) {
