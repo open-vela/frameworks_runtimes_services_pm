@@ -193,6 +193,33 @@ int PmCommand::runGetPackage() {
     return status;
 }
 
+int PmCommand::runPackageStats() {
+    std::string_view packageName = nextArg();
+    if (packageName.empty()) {
+        return showUsage();
+    }
+    PackageStats pkgStats;
+    int status = pm.getPackageSizeInfo(std::string(packageName), &pkgStats);
+    if (!status) {
+        auto print = [](int64_t size, const char *name) {
+            if (size < 1024) {
+                printf("%s:%lldB\n", name, size);
+            } else if (size < 1024 * 1024) {
+                printf("%s:%.1fKB\n", name, size / 1024.0);
+            } else {
+                printf("%s:%.1fMB\n", name, size / (1024.0 * 1024.0));
+            }
+        };
+        print(pkgStats.codeSize + pkgStats.dataSize, "totalSize");
+        print(pkgStats.codeSize, "codeSize");
+        print(pkgStats.dataSize - pkgStats.cacheSize, "dataSize");
+        print(pkgStats.cacheSize, "cacheSize");
+    } else {
+        printf("get %.*s failed\n", static_cast<int>(packageName.length()), packageName.data());
+    }
+    return status;
+}
+
 int PmCommand::showUsage() {
     printf("usage: pm [subcommand] [options]\n\n");
     printf("  pm install PATH\n");
@@ -200,6 +227,7 @@ int PmCommand::showUsage() {
     printf("  pm clear PACKAGE\n");
     printf("  pm list\n");
     printf("  pm get PACKAGE\n");
+    printf("  pm stats PACKAGE\n");
     return 0;
 }
 
@@ -229,6 +257,9 @@ int PmCommand::run(int argc, char *argv[]) {
     }
     if (strcmp("clear", op) == 0) {
         return runClear();
+    }
+    if (strcmp("stats", op) == 0) {
+        return runPackageStats();
     }
     return showUsage();
 }

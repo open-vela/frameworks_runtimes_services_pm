@@ -22,6 +22,7 @@
 #include "os/pm/IPackageManager.h"
 #include "os/pm/InstallParam.h"
 #include "os/pm/UninstallParam.h"
+#include "os/pm/PackageStats.h"
 
 namespace os {
 namespace pm {
@@ -42,6 +43,7 @@ public:
     Status installPackage(const InstallParam &param, const android::sp<IInstallObserver> &observer);
     Status uninstallPackage(const UninstallParam &param,
                             const android::sp<IUninstallObserver> &observer);
+    Status getPackageSizeInfo(const std::string &packageName,PackageStats* pkgStats);
     static android::String16 name() {
         return android::String16("package");
     }

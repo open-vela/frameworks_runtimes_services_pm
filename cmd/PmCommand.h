@@ -31,6 +31,7 @@ public:
     int runList();
     int runClear();
     int runGetPackage();
+    int runPackageStats();
     int showUsage();
     int run(int argc, char *argv[]);
 
