@@ -16,18 +16,8 @@
 
 package os.pm;
 
-import os.pm.PackageInfo;
-import os.pm.InstallParam;
-import os.pm.IInstallObserver;
-import os.pm.UninstallParam;
-import os.pm.IUninstallObserver;
-import os.pm.PackageStats;
-
-interface IPackageManager {
-    PackageInfo[] getAllPackageInfo();
-    PackageInfo getPackageInfo(@utf8InCpp String packageName);
-    int clearAppCache(@utf8InCpp String packageName);
-    oneway void installPackage(in InstallParam param, IInstallObserver observer);
-    oneway void uninstallPackage(in UninstallParam param, IUninstallObserver observer);
-    PackageStats getPackageSizeInfo(@utf8InCpp String packageName);
+parcelable PackageStats {
+    long dataSize;
+    long cacheSize;
+    long codeSize;
 }

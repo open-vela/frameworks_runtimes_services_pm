@@ -19,6 +19,7 @@
 #include "os/pm/BnInstallObserver.h"
 #include "os/pm/BnUninstallObserver.h"
 #include "os/pm/IPackageManager.h"
+#include "os/pm/PackageStats.h"
 
 namespace os {
 namespace pm {
@@ -34,6 +35,7 @@ public:
     int32_t installPackage(const InstallParam &param, sp<BnInstallObserver> listener = nullptr);
     int32_t uninstallPackage(const UninstallParam &param,
                              sp<BnUninstallObserver> listener = nullptr);
+    int32_t getPackageSizeInfo(const std::string &packageName, PackageStats *stats);
 
 private:
     sp<IPackageManager> mService;
