@@ -107,6 +107,10 @@ int PackageParser::parseNativeManifest(const rapidjson::Document &document, Pack
     for (size_t i = 0; i < servicesArray.Size(); i++) {
         ServiceInfo serviceInfo;
         serviceInfo.name = getValue<std::string>(servicesArray[i], "name", "");
+        if (serviceInfo.name.empty()) {
+            ALOGE("Failed parse manifest:%s services.name field", info->manifest.c_str());
+            return android::BAD_VALUE;
+        }
         serviceInfo.exported = getValue<bool>(servicesArray[i], "exported", false);
         const rapidjson::Value &intent =
                 getValue<const rapidjson::Value &>(servicesArray[i], "intent-filter", baseObject);
@@ -122,7 +126,7 @@ int PackageParser::parseNativeManifest(const rapidjson::Document &document, Pack
 
 int PackageParser::parseQuickAppManifest(const rapidjson::Document &document, PackageInfo *info) {
     if (info == nullptr) return android::NO_INIT;
-
+    info->execfile = getValue<std::string>(document, "execfile", "vapp");
     QuickAppInfo quickappInfo;
     quickappInfo.versionCode = getValue<int>(document, "versionCode", 0);
     const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
