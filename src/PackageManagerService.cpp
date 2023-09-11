@@ -20,9 +20,9 @@
 
 #include <filesystem>
 
-#include "../system_server/BaseProfiler.h"
 #include "PackageInstaller.h"
 #include "PackageParser.h"
+#include "PackageTrace.h"
 #include "PackageUtils.h"
 
 namespace os {
