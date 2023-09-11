@@ -20,7 +20,7 @@
 #include <binder/IServiceManager.h>
 #include <binder/ProcessState.h>
 
-#include "../system_server/BaseProfiler.h"
+#include "PackageTrace.h"
 #include "pm/PackageManagerService.h"
 
 namespace os {
