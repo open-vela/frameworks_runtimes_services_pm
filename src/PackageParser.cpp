@@ -126,7 +126,17 @@ int PackageParser::parseNativeManifest(const rapidjson::Document &document, Pack
 
 int PackageParser::parseQuickAppManifest(const rapidjson::Document &document, PackageInfo *info) {
     if (info == nullptr) return android::NO_INIT;
-    info->execfile = getValue<std::string>(document, "execfile", "vapp");
+    /* quickapp has not activities field,this place provides a default for ams to use. */
+    /* QuickActivity object belong to application registered. */
+    /* quickapp not has exec,vappxms is quickapp default exec,ams according to exec how to start. */
+    info->execfile = getValue<std::string>(document, "execfile", "vappxms");
+    info->entry = getValue<std::string>(document, "entry", "QuickActivity");
+    ActivityInfo defaultActivity;
+    defaultActivity.name = "QuickActivity";
+    defaultActivity.launchMode = "singleTask";
+    defaultActivity.taskAffinity = info->packageName;
+    info->activitiesInfo.push_back(defaultActivity);
+
     QuickAppInfo quickappInfo;
     quickappInfo.versionCode = getValue<int>(document, "versionCode", 0);
     const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
@@ -142,9 +152,7 @@ int PackageParser::parseQuickAppManifest(const rapidjson::Document &document, Pa
     Router router;
     const rapidjson::Value &routerValue =
             getValue<const rapidjson::Value &>(document, "router", baseObject);
-    std::string entry = getValue<std::string>(routerValue, "entry", "");
-    info->entry = entry;
-    router.entry = entry;
+    router.entry = getValue<std::string>(routerValue, "entry", "");
     const rapidjson::Value &pagesValue =
             getValue<const rapidjson::Value &>(routerValue, "pages", baseObject);
     for (rapidjson::Value::ConstMemberIterator itr = pagesValue.MemberBegin();
