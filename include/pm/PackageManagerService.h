@@ -21,15 +21,14 @@
 #include "os/pm/BnPackageManager.h"
 #include "os/pm/IPackageManager.h"
 #include "os/pm/InstallParam.h"
-#include "os/pm/UninstallParam.h"
 #include "os/pm/PackageStats.h"
+#include "os/pm/UninstallParam.h"
 
 namespace os {
 namespace pm {
 
 using android::binder::Status;
 
-class PackageConfig;
 class PackageInstaller;
 class PackageParser;
 
@@ -43,7 +42,7 @@ public:
     Status installPackage(const InstallParam &param, const android::sp<IInstallObserver> &observer);
     Status uninstallPackage(const UninstallParam &param,
                             const android::sp<IUninstallObserver> &observer);
-    Status getPackageSizeInfo(const std::string &packageName,PackageStats* pkgStats);
+    Status getPackageSizeInfo(const std::string &packageName, PackageStats *pkgStats);
     static android::String16 name() {
         return android::String16("package");
     }
@@ -53,7 +52,6 @@ private:
     std::map<std::string, PackageInfo> mPackageInfo;
     PackageInstaller *mInstaller;
     PackageParser *mParser;
-    PackageConfig *mConfig;
 }; // class PackageManagerService
 
 } // namespace pm

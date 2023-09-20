@@ -30,6 +30,20 @@ namespace pm {
 #define PACKAGE_CFG "/etc/package.cfg"
 #define PACKAGE_LIST_PATH "/data/app/packages.list"
 
+class PackageConfig {
+public:
+    static PackageConfig &getInstance();
+    std::string getAppPresetPath();
+    std::string getAppInstalledPath();
+    std::string getAppDataPath();
+
+private:
+    PackageConfig();
+    std::string mAppPresetPath;
+    std::string mAppInstalledPath;
+    std::string mAppDataPath;
+};
+
 std::string getCurrentTime();
 bool createDirectory(const char *path);
 bool removeDirectory(const char *path);

@@ -67,8 +67,11 @@ int PackageInstaller::installQuickApp(const InstallParam &param) {
         return android::NAME_NOT_FOUND;
     }
 
-    std::string tmp = temp_directory_path().string();
+    std::string tmp = joinPath(PackageConfig::getInstance().getAppInstalledPath(), "tmp");
     tmp = joinPath(tmp, rpkName);
+    if (exists(tmp.c_str())) {
+        removeDirectory(tmp.c_str());
+    }
     if (!createDirectory(tmp.c_str())) {
         return android::PERMISSION_DENIED;
     }
