@@ -46,6 +46,31 @@ using std::filesystem::perms;
 using std::filesystem::recursive_directory_iterator;
 using std::filesystem::remove_all;
 
+PackageConfig::PackageConfig() {
+    rapidjson::Document doc;
+    getDocument(PACKAGE_CFG, doc);
+    mAppPresetPath = getValue<std::string>(doc, "appPresetPath", "/system/app");
+    mAppInstalledPath = getValue<std::string>(doc, "appInstalledPath", "/data/app");
+    mAppDataPath = getValue<std::string>(doc, "appDataPath", "/data/data");
+}
+
+PackageConfig &PackageConfig::getInstance() {
+    static PackageConfig instance;
+    return instance;
+}
+
+std::string PackageConfig::getAppPresetPath() {
+    return mAppPresetPath;
+}
+
+std::string PackageConfig::getAppInstalledPath() {
+    return mAppInstalledPath;
+}
+
+std::string PackageConfig::getAppDataPath() {
+    return mAppDataPath;
+}
+
 std::string getCurrentTime() {
     const auto finish = system_clock::to_time_t(system_clock::now());
     std::tm finish_tm;

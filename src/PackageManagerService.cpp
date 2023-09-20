@@ -31,36 +31,17 @@ namespace pm {
 using std::filesystem::copy_options;
 using std::filesystem::directory_iterator;
 using std::filesystem::exists;
-using std::filesystem::remove;
+using std::filesystem::remove_all;
+using std::filesystem::rename;
 using std::filesystem::temp_directory_path;
 
-class PackageConfig {
-public:
-    void loadConfig() {
-        rapidjson::Document doc;
-        getDocument(PACKAGE_CFG, doc);
-        mPresetAppPath = getValue<std::string>(doc, "presetAppPath", "/system/app");
-        mInstalledPath = getValue<std::string>(doc, "installedPath", "/data/app");
-        mAppDataPath = getValue<std::string>(doc, "appDataPath", "/data/data");
-    }
-
-    std::string mPresetAppPath;
-    std::string mInstalledPath;
-    std::string mAppDataPath;
-};
-
 PackageManagerService::PackageManagerService() {
-    mConfig = new PackageConfig();
     mInstaller = new PackageInstaller();
     mParser = new PackageParser();
     init();
 }
 
 PackageManagerService::~PackageManagerService() {
-    if (mConfig) {
-        delete mConfig;
-        mConfig = nullptr;
-    }
     if (mParser) {
         delete mParser;
         mParser = nullptr;
@@ -73,12 +54,12 @@ PackageManagerService::~PackageManagerService() {
 
 void PackageManagerService::init() {
     PM_PROFILER_BEGIN();
-    mConfig->loadConfig();
     // create and scan manifest
     if (!exists(PACKAGE_LIST_PATH)) {
         mInstaller->createPackageList();
         std::vector<PackageInfo> vecPackageInfo;
-        for (const auto &entry : directory_iterator(mConfig->mPresetAppPath.c_str())) {
+        for (const auto &entry :
+             directory_iterator(PackageConfig::getInstance().getAppPresetPath().c_str())) {
             if (entry.is_directory()) {
                 PackageInfo pkgInfo;
                 pkgInfo.manifest = joinPath(entry.path().string(), MANIFEST);
@@ -87,7 +68,9 @@ void PackageManagerService::init() {
                     pkgInfo.userId = mInstaller->createUserId();
                     mPackageInfo.insert(std::make_pair(pkgInfo.packageName, pkgInfo));
                     vecPackageInfo.push_back(pkgInfo);
-                    std::string appDataPath = joinPath(mConfig->mAppDataPath, pkgInfo.packageName);
+                    std::string appDataPath =
+                            joinPath(PackageConfig::getInstance().getAppDataPath(),
+                                     pkgInfo.packageName);
                     if (!exists(appDataPath.c_str())) {
                         createDirectory(appDataPath.c_str());
                     }
@@ -150,15 +133,14 @@ Status PackageManagerService::clearAppCache(const std::string &packageName, int3
         PM_PROFILER_END();
         return Status::ok();
     }
-    for (const auto &entry :
-         directory_iterator(joinPath(mConfig->mAppDataPath, packageName).c_str())) {
-        if (entry.is_directory()) {
-            removeDirectory(entry.path().c_str());
-        } else {
-            remove(entry.path().c_str());
-        }
+
+    std::error_code ec;
+    remove_all(joinPath(PackageConfig::getInstance().getAppDataPath(), packageName), ec);
+    if (ec) {
+        ALOGE("clearAppCache remove_all error:%s", ec.message().c_str());
+    } else {
+        *ret = 0;
     }
-    *ret = 0;
     PM_PROFILER_END();
     return Status::ok();
 }
@@ -174,8 +156,9 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     }
     pos = rpkFullName.rfind('.');
     std::string rpkName = rpkFullName.substr(0, pos);
-    std::string dstPath = joinPath(mConfig->mInstalledPath, rpkName);
-    std::string tmp = joinPath(temp_directory_path().string(), rpkName);
+    std::string dstPath = joinPath(PackageConfig::getInstance().getAppInstalledPath(), rpkName);
+    std::string tmp = joinPath(PackageConfig::getInstance().getAppInstalledPath(), "tmp");
+    tmp = joinPath(tmp, rpkName);
 
     int ret = mInstaller->installApp(param);
     if (ret) {
@@ -189,6 +172,7 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     packageinfo.manifest = joinPath(tmp, MANIFEST);
     ret = mParser->parseManifest(&packageinfo);
     if (ret) {
+        removeDirectory(tmp.c_str());
         ALOGE("parse manifest:%s failed\n", packageinfo.manifest.c_str());
         observer->onInstallResult(packageinfo.packageName, ret, "Failed to parse manifest");
         PM_PROFILER_END();
@@ -199,24 +183,17 @@ Status PackageManagerService::installPackage(const InstallParam &param,
         removeDirectory(dstPath.c_str());
     }
 
-    if (!createDirectory(dstPath.c_str())) {
-        observer->onInstallResult(packageinfo.packageName, android::PERMISSION_DENIED,
-                                  "Failed to create Directory");
-        ALOGE("create directory %s failed", dstPath.c_str());
-        PM_PROFILER_END();
-        return Status::fromExceptionCode(Status::EX_SERVICE_SPECIFIC);
-    }
-
     std::error_code ec;
-    copy(tmp, dstPath, copy_options::recursive, ec);
+    rename(tmp.c_str(), dstPath.c_str(), ec);
     if (ec) {
-        observer->onInstallResult(packageinfo.packageName, ret, "Failed to create Directory");
+        observer->onInstallResult(packageinfo.packageName, Status::EX_SECURITY,
+                                  "Failed to copy file");
         ALOGE("Copy from %s to %s Failed:%s", tmp.c_str(), dstPath.c_str(), ec.message().c_str());
         PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_SECURITY);
     }
-    removeDirectory(tmp.c_str());
-    std::string appDataPath = joinPath(mConfig->mAppDataPath, packageinfo.packageName);
+    std::string appDataPath =
+            joinPath(PackageConfig::getInstance().getAppDataPath(), packageinfo.packageName);
     if (!exists(appDataPath.c_str())) {
         createDirectory(appDataPath.c_str());
     }
@@ -224,9 +201,13 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     packageinfo.installedPath = dstPath;
     packageinfo.manifest = joinPath(dstPath, MANIFEST);
     if (mPackageInfo.find(packageinfo.packageName) != mPackageInfo.end()) {
-        packageinfo.userId = mPackageInfo[packageinfo.packageName].userId;
+        PackageInfo oldPackageInfo = mPackageInfo[packageinfo.packageName];
+        packageinfo.userId = oldPackageInfo.userId;
         mPackageInfo.erase(packageinfo.packageName);
         mInstaller->deleteInfoFromPackageList(packageinfo.packageName);
+        if (oldPackageInfo.installedPath != packageinfo.installedPath) {
+            removeDirectory(oldPackageInfo.installedPath.c_str());
+        }
     }
     mPackageInfo.insert(std::make_pair(packageinfo.packageName, packageinfo));
     mInstaller->addInfoToPackageList(packageinfo);
@@ -262,7 +243,8 @@ Status PackageManagerService::uninstallPackage(const UninstallParam &param,
     mPackageInfo.erase(param.packageName);
     mInstaller->deleteInfoFromPackageList(param.packageName);
     if (param.clearCache) {
-        removeDirectory(joinPath(mConfig->mAppDataPath, param.packageName).c_str());
+        removeDirectory(
+                joinPath(PackageConfig::getInstance().getAppDataPath(), param.packageName).c_str());
     }
     if (observer) {
         observer->onUninstallResult(param.packageName, 0, "success");
@@ -283,7 +265,7 @@ Status PackageManagerService::getPackageSizeInfo(const std::string &packageName,
 
     PackageInfo pkgInfo = mPackageInfo[packageName];
     std::string codePath = pkgInfo.installedPath;
-    std::string dataPath = joinPath(mConfig->mAppDataPath, packageName);
+    std::string dataPath = joinPath(PackageConfig::getInstance().getAppDataPath(), packageName);
     std::string cachePath = joinPath(dataPath, "cache");
     pkgStats->codeSize = getDirectorySize(codePath.c_str());
     pkgStats->dataSize = getDirectorySize(dataPath.c_str());
