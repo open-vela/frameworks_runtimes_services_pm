@@ -135,10 +135,21 @@ Status PackageManagerService::clearAppCache(const std::string &packageName, int3
     }
 
     std::error_code ec;
-    remove_all(joinPath(PackageConfig::getInstance().getAppDataPath(), packageName), ec);
-    if (ec) {
-        ALOGE("clearAppCache remove_all error:%s", ec.message().c_str());
-    } else {
+    std::string path = joinPath(PackageConfig::getInstance().getAppDataPath(), packageName);
+    bool success = true;
+    for (const auto &entry : directory_iterator(path)) {
+        if (entry.is_directory()) {
+            if (!removeDirectory(entry.path().string().c_str())) {
+                success = false;
+            }
+        } else {
+            if (unlink(entry.path().string().c_str()) != 0) {
+                ALOGE("unlink %s failed", entry.path().string().c_str());
+                success = false;
+            }
+        }
+    }
+    if (success) {
         *ret = 0;
     }
     PM_PROFILER_END();
