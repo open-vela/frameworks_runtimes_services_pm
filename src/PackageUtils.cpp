@@ -18,6 +18,7 @@
 
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/stringbuffer.h>
+#include <sys/stat.h>
 #include <utils/Errors.h>
 #include <utils/Log.h>
 
@@ -91,13 +92,50 @@ bool createDirectory(const char *path) {
 }
 
 bool removeDirectory(const char *path) {
-    error_code ec;
-    int ret = remove_all(path, ec);
-    if (ec) {
-        ALOGE("Failed to delete %s:%s", path, ec.message().c_str());
-        return ret;
+    struct stat stat;
+    int ret = lstat(path, &stat);
+    if (ret < 0) {
+        ALOGE("%s lstat error:%d", path, ret);
+        return false;
     }
-    return true;
+
+    if (!S_ISDIR(stat.st_mode)) {
+        ret = unlink(path);
+        return ret ? false : true;
+    }
+
+    DIR *dp = opendir(path);
+    if (dp == NULL) {
+        ALOGE("%s open failed", path);
+        return false;
+    }
+
+    int len = strlen(path);
+    char childPath[PATH_MAX] = {0};
+    strcpy(childPath, path);
+    if (len > 0 && childPath[len - 1] == '/') {
+        childPath[--len] = '\0';
+    }
+
+    struct dirent *d;
+    while ((d = readdir(dp)) != NULL) {
+        if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0) {
+            continue;
+        }
+
+        snprintf(&childPath[len], PATH_MAX - len, "/%s", d->d_name);
+        if (!removeDirectory(childPath)) {
+            closedir(dp);
+            return false;
+        }
+    }
+
+    ret = closedir(dp);
+    if (ret >= 0) {
+        ret = rmdir(path);
+    }
+
+    return ret ? false : true;
 }
 
 int readFile(const char *filename, std::string &content) {
