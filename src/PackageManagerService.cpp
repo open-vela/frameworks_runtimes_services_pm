@@ -79,6 +79,42 @@ void PackageManagerService::init() {
         }
         mInstaller->addInfoToPackageList(vecPackageInfo);
     } else {
+#ifdef CONFIG_SYSTEM_PACKAGE_SERVICE_DEBUG
+        std::vector<std::string> vecScanPath;
+        std::string dirPath = PackageConfig::getInstance().getAppPresetPath();
+        for (const auto &entry : directory_iterator(dirPath.c_str())) {
+            if (entry.is_directory()) {
+                vecScanPath.push_back(entry.path().string());
+            }
+        }
+        dirPath = PackageConfig::getInstance().getAppInstalledPath();
+        for (const auto &entry : directory_iterator(dirPath.c_str())) {
+            if (entry.is_directory()) {
+                if (entry.path().string() != joinPath(dirPath, "tmp")) {
+                    vecScanPath.push_back(entry.path().string());
+                }
+            }
+        }
+        std::vector<PackageInfo> vecPackageInfo;
+        for (auto path : vecScanPath) {
+            PackageInfo pkgInfo;
+            pkgInfo.manifest = joinPath(path, MANIFEST);
+            int ret = mParser->parseManifest(&pkgInfo);
+            if (!ret) {
+                pkgInfo.userId = mInstaller->createUserId();
+                mPackageInfo.insert(std::make_pair(pkgInfo.packageName, pkgInfo));
+                vecPackageInfo.push_back(pkgInfo);
+                std::string appDataPath = joinPath(PackageConfig::getInstance().getAppDataPath(),
+                                                   pkgInfo.packageName);
+                if (!exists(appDataPath.c_str())) {
+                    createDirectory(appDataPath.c_str());
+                }
+            }
+        }
+        unlink(PACKAGE_LIST_PATH);
+        mInstaller->createPackageList();
+        mInstaller->addInfoToPackageList(vecPackageInfo);
+#endif
         mInstaller->loadPackageList(&mPackageInfo);
     }
     PM_PROFILER_END();

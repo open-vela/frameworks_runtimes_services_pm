@@ -28,7 +28,11 @@ config SYSTEM_PACKAGE_SERVICE_COMMAND
 
 config SYSTEM_PACKAGE_SERVICE_TEST
 	bool "Enable package manager google test"
-    default n
-    depends on GOOGLE_TEST
+	default n
+	depends on GOOGLE_TEST
+
+config SYSTEM_PACKAGE_SERVICE_DEBUG
+	bool "Enable PMS scan AppPresetPath on every startup"
+	default y
 
 endif
