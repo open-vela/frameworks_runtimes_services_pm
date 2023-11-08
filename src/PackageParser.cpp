@@ -164,6 +164,15 @@ int PackageParser::parseQuickAppManifest(const rapidjson::Document &document, Pa
         }
     }
     quickappInfo.router = router;
+
+    const rapidjson::Value &serviceArray =
+            getValue<const rapidjson::Value &>(document, "services", baseArray);
+    for (size_t i = 0; i < serviceArray.Size(); i++) {
+        ServiceInfo serviceInfo;
+        serviceInfo.name = getValue<std::string>(serviceArray[i], "name", "");
+        serviceInfo.path = getValue<std::string>(serviceArray[i], "path", "");
+        info->servicesInfo.push_back(serviceInfo);
+    }
     info->extra = quickappInfo;
     return 0;
 }

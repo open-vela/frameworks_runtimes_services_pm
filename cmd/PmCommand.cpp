@@ -109,6 +109,7 @@ static std::string dumpPackageInfo(const PackageInfo &info) {
     for (auto &service : info.servicesInfo) {
         oss << "     {" << std::endl;
         oss << "\tname: " << service.name << std::endl;
+        oss << "\tpath: " << service.path << std::endl;
         oss << "\texported:" << service.exported << std::endl;
         oss << "\tactions:[" << std::endl;
         for (auto &action : service.actions) {
@@ -118,16 +119,6 @@ static std::string dumpPackageInfo(const PackageInfo &info) {
         oss << "     }" << std::endl;
     }
     oss << "  ]" << std::endl;
-    if (info.extra.has_value()) {
-        QuickAppInfo quickappInfo = info.extra.value();
-        oss << "  versionCode: " << quickappInfo.versionCode << std::endl;
-        oss << "  features: [" << std::endl;
-        for (auto &feature : quickappInfo.features) {
-            oss << "    " << feature << std::endl;
-        }
-        oss << "  ]" << std::endl;
-        oss << "  router:" << quickappInfo.router.toString() << std::endl;
-    }
     oss << "}";
     return oss.str();
 }
@@ -161,8 +152,15 @@ int PmCommand::runUninstall() {
 int PmCommand::runList() {
     std::vector<PackageInfo> pkgInfos;
     int status = pm.getAllPackageInfo(&pkgInfos);
+    std::string_view arg = nextArg();
     for (size_t i = 0; i < pkgInfos.size(); i++) {
-        printf("%s\n", dumpPackageInfo(pkgInfos[i]).c_str());
+        if (arg == "-a") {
+            printf("%s\n", pkgInfos[i].toString().c_str());
+        } else if (arg == "-l") {
+            printf("%s\n", pkgInfos[i].packageName.c_str());
+        } else {
+            printf("%s\n", dumpPackageInfo(pkgInfos[i]).c_str());
+        }
     }
     return status;
 }
