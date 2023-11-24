@@ -20,7 +20,7 @@
 
 #include "os/pm/IInstallObserver.h"
 #include "os/pm/InstallParam.h"
-#include "os/pm/PackageInfo.h"
+#include "pm/PackageInfo.h"
 
 namespace os {
 namespace pm {
