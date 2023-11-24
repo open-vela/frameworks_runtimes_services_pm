@@ -19,23 +19,16 @@
 #include <optional>
 
 #include "PackageUtils.h"
-#include "os/pm/PackageInfo.h"
+#include "pm/PackageInfo.h"
 
 namespace os {
 namespace pm {
-
-enum ApplicationType {
-    UNKNOWN = -1,
-    NATIVE = 1,
-    QUICKAPP,
-};
 
 class PackageParser {
 public:
     int parseManifest(PackageInfo *info);
 
 private:
-    ApplicationType getApplicationType(const std::string &str);
     int parseNativeManifest(const rapidjson::Document &document, PackageInfo *info);
     int parseQuickAppManifest(const rapidjson::Document &document, PackageInfo *info);
 }; // class PackageParser

@@ -22,7 +22,7 @@ CXXEXT = .cpp
 
 ifneq ($(CONFIG_SYSTEM_PACKAGE_SERVICE),)
 CXXFLAGS += -Wno-class-memaccess
-CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/external/rapidjson/rapidjson/include
+CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/external/rapidjson/rapidjson/include  ${INCDIR_PREFIX}../include
 AIDLSRCS += $(shell find aidl -name *.aidl)
 AIDLFLAGS = --lang=cpp --include=aidl/ -I. -haidl/ -oaidl/
 CXXSRCS += $(patsubst %.aidl,%$(CXXEXT),$(AIDLSRCS))
