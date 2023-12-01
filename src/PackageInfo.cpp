@@ -61,6 +61,7 @@ android::status_t PackageInfo::readFromParcel(const android::Parcel *parcel) {
     SAFE_PARCEL(parcel->readParcelableVector, &activitiesInfo);
     SAFE_PARCEL(parcel->readParcelableVector, &servicesInfo);
     SAFE_PARCEL(parcel->readParcelable, &extra);
+    SAFE_PARCEL(parcel->readInt32, &priority);
     SAFE_PARCEL(parcel->readInt32, &userId);
     SAFE_PARCEL(parcel->readInt64, &size);
     SAFE_PARCEL(parcel->readBool, &bAllValid);
@@ -82,6 +83,7 @@ android::status_t PackageInfo::writeToParcel(android::Parcel *parcel) const {
     SAFE_PARCEL(parcel->writeParcelableVector, activitiesInfo);
     SAFE_PARCEL(parcel->writeParcelableVector, servicesInfo);
     SAFE_PARCEL(parcel->writeNullableParcelable, extra);
+    SAFE_PARCEL(parcel->writeInt32, priority);
     SAFE_PARCEL(parcel->writeInt32, userId);
     SAFE_PARCEL(parcel->writeInt64, size);
     SAFE_PARCEL(parcel->writeBool, bAllValid);
@@ -105,6 +107,7 @@ std::string PackageInfo::toString() const {
     os << ", activitiesInfo: " << ::android::internal::ToString(activitiesInfo);
     os << ", servicesInfo: " << ::android::internal::ToString(servicesInfo);
     os << ", extra: " << ::android::internal::ToString(extra);
+    os << ", priority: " << ::android::internal::ToString(priority);
     os << ", userId: " << ::android::internal::ToString(userId);
     os << ", size: " << ::android::internal::ToString(size);
     os << ", bAllValid: " << ::android::internal::ToString(bAllValid);
@@ -128,6 +131,7 @@ std::string PackageInfo::dumpSimplePackageInfo() {
     oss << "  entry: " << entry << std::endl;
     oss << "  installTime: " << installTime << std::endl;
     oss << "  shasum: " << shasum << std::endl;
+    oss << "  priority: " << priority << std::endl;
     oss << "  userId: " << userId << std::endl;
     oss << "  size: " << size << std::endl;
     oss << "  activities:[" << std::endl;
@@ -151,6 +155,7 @@ std::string PackageInfo::dumpSimplePackageInfo() {
         oss << "\tpath: " << service.path << std::endl;
         oss << "\texported:" << service.exported << std::endl;
         oss << "\tpriority:" << service.priority << std::endl;
+        oss << "\ttype:" << service.type << std::endl;
         oss << "\tactions:[" << std::endl;
         for (auto &action : service.actions) {
             oss << "\t  " << action << std::endl;
