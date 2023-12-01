@@ -48,6 +48,7 @@ int PackageParser::parseManifest(PackageInfo *info) {
     }
     info->name = getValue<std::string>(document, "name", "");
     info->icon = getValue<std::string>(document, "icon", "");
+    info->priority = getServicePriority(getValue<std::string>(document, "priority", "middle"));
 
     switch (getApplicationType(info->appType)) {
         case ApplicationType::NATIVE:
@@ -173,6 +174,7 @@ int PackageParser::parseQuickAppManifest(const rapidjson::Document &document, Pa
         ServiceInfo serviceInfo;
         serviceInfo.name = getValue<std::string>(serviceArray[i], "name", "");
         serviceInfo.path = getValue<std::string>(serviceArray[i], "path", "");
+        serviceInfo.type = getValue<std::string>(serviceArray[i], "type", "js");
         serviceInfo.priority = getServicePriority(
                 getValue<std::string>(serviceArray[i], "priority", "persistent"));
         info->servicesInfo.push_back(serviceInfo);

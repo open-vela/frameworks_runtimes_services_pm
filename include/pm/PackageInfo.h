@@ -48,6 +48,7 @@ public:
     std::vector<ActivityInfo> activitiesInfo;
     std::vector<ServiceInfo> servicesInfo;
     std::optional<QuickAppInfo> extra;
+    int32_t priority;
     int32_t userId;
     int64_t size;
     bool bAllValid;
