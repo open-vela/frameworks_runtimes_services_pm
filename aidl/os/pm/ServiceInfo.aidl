@@ -21,5 +21,6 @@ parcelable ServiceInfo {
     boolean exported;
     @utf8InCpp String[] actions;
     @utf8InCpp String path;
+    @utf8InCpp String type;
     int priority;
 }
