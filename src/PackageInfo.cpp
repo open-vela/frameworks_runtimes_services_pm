@@ -34,15 +34,15 @@ ApplicationType getApplicationType(const std::string &appType) {
     return ApplicationType::UNKNOWN;
 }
 
-ServicePriority getServicePriority(const std::string &str) {
+ProcessPriority getProcessPriority(const std::string &str) {
     if (str == "low") {
-        return ServicePriority::LOW;
+        return ProcessPriority::LOW;
     } else if (str == "middle") {
-        return ServicePriority::MIDDLE;
+        return ProcessPriority::MIDDLE;
     } else if (str == "high") {
-        return ServicePriority::HIGH;
+        return ProcessPriority::HIGH;
     } else {
-        return ServicePriority::PERSISTENT;
+        return ProcessPriority::PERSISTENT;
     }
 }
 

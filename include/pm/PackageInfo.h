@@ -25,11 +25,11 @@
 namespace os {
 namespace pm {
 
-enum ServicePriority { LOW = 0, MIDDLE, HIGH, PERSISTENT };
+enum ProcessPriority { LOW = 0, MIDDLE, HIGH, PERSISTENT };
 
 enum ApplicationType { UNKNOWN = -1, NATIVE = 0, QUICKAPP };
 
-ServicePriority getServicePriority(const std::string& str);
+ProcessPriority getProcessPriority(const std::string& str);
 ApplicationType getApplicationType(const std::string& appType);
 
 class PackageInfo : public ::android::Parcelable {
