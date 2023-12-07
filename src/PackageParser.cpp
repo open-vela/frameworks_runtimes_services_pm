@@ -48,7 +48,7 @@ int PackageParser::parseManifest(PackageInfo *info) {
     }
     info->name = getValue<std::string>(document, "name", "");
     info->icon = getValue<std::string>(document, "icon", "");
-    info->priority = getServicePriority(getValue<std::string>(document, "priority", "middle"));
+    info->priority = getProcessPriority(getValue<std::string>(document, "priority", "middle"));
 
     switch (getApplicationType(info->appType)) {
         case ApplicationType::NATIVE:
@@ -117,7 +117,7 @@ int PackageParser::parseNativeManifest(const rapidjson::Document &document, Pack
                 getValue<const rapidjson::Value &>(servicesArray[i], "intent-filter", baseObject);
         const rapidjson::Value &actionArray =
                 getValue<const rapidjson::Value &>(intent, "actions", baseArray);
-        serviceInfo.priority = getServicePriority(
+        serviceInfo.priority = getProcessPriority(
                 getValue<std::string>(servicesArray[i], "priority", "persistent"));
         for (size_t j = 0; j < actionArray.Size(); j++) {
             serviceInfo.actions.push_back(actionArray[j].GetString());
@@ -175,7 +175,7 @@ int PackageParser::parseQuickAppManifest(const rapidjson::Document &document, Pa
         serviceInfo.name = getValue<std::string>(serviceArray[i], "name", "");
         serviceInfo.path = getValue<std::string>(serviceArray[i], "path", "");
         serviceInfo.type = getValue<std::string>(serviceArray[i], "type", "js");
-        serviceInfo.priority = getServicePriority(
+        serviceInfo.priority = getProcessPriority(
                 getValue<std::string>(serviceArray[i], "priority", "persistent"));
         info->servicesInfo.push_back(serviceInfo);
     }
