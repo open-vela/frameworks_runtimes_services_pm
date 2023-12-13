@@ -84,7 +84,7 @@ int32_t PackageManager::installPackage(const InstallParam &param, sp<BnInstallOb
     if (!status.isOk()) {
         ALOGE("installPackage failed:%s", status.toString8().c_str());
     }
-    PM_PROFILER_BEGIN();
+    PM_PROFILER_END();
     return status.exceptionCode();
 }
 
@@ -96,7 +96,7 @@ int32_t PackageManager::uninstallPackage(const UninstallParam &param,
     if (!status.isOk()) {
         ALOGE("uninstallPackage failed:%s", status.toString8().c_str());
     }
-    PM_PROFILER_BEGIN();
+    PM_PROFILER_END();
     return status.exceptionCode();
 }
 
@@ -107,7 +107,18 @@ int32_t PackageManager::getPackageSizeInfo(const std::string &packageName, Packa
     if (!status.isOk()) {
         ALOGE("getPackageStats failed:%s", status.toString8().c_str());
     }
+    PM_PROFILER_END();
+    return status.exceptionCode();
+}
+
+int32_t PackageManager::isFirstBoot(bool *firstBoot) {
+    ASSERT_SERVICE(mService == nullptr);
     PM_PROFILER_BEGIN();
+    Status status = mService->isFirstBoot(firstBoot);
+    if (!status.isOk()) {
+        ALOGE("isFirstBoot failed:%s", status.toString8().c_str());
+    }
+    PM_PROFILER_END();
     return status.exceptionCode();
 }
 
