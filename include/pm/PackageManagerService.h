@@ -43,12 +43,14 @@ public:
     Status uninstallPackage(const UninstallParam &param,
                             const android::sp<IUninstallObserver> &observer);
     Status getPackageSizeInfo(const std::string &packageName, PackageStats *pkgStats);
+    Status isFirstBoot(bool *firstBoot);
     static android::String16 name() {
         return android::String16("package");
     }
 
 private:
     void init();
+    bool mFirstBoot;
     std::map<std::string, PackageInfo> mPackageInfo;
     PackageInstaller *mInstaller;
     PackageParser *mParser;

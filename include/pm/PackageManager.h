@@ -36,6 +36,7 @@ public:
     int32_t uninstallPackage(const UninstallParam &param,
                              sp<BnUninstallObserver> listener = nullptr);
     int32_t getPackageSizeInfo(const std::string &packageName, PackageStats *stats);
+    int32_t isFirstBoot(bool *firstBoot);
 
 private:
     sp<IPackageManager> mService;

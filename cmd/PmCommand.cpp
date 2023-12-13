@@ -168,6 +168,18 @@ int PmCommand::runPackageStats() {
     return status;
 }
 
+int PmCommand::runFirstBoot() {
+    bool isFirstBoot;
+    int status = pm.isFirstBoot(&isFirstBoot);
+    if (!status) {
+        printf("%s\n", isFirstBoot ? "true" : "false");
+    } else {
+        printf("get isFirstBoot failed\n");
+    }
+
+    return 0;
+}
+
 int PmCommand::showUsage() {
     printf("usage: pm [subcommand] [options]\n\n");
     printf("  pm install PATH\n");
@@ -176,6 +188,7 @@ int PmCommand::showUsage() {
     printf("  pm list\n");
     printf("  pm get PACKAGE\n");
     printf("  pm stats PACKAGE\n");
+    printf("  pm firstboot\n");
     return 0;
 }
 
@@ -208,6 +221,9 @@ int PmCommand::run(int argc, char *argv[]) {
     }
     if (strcmp("stats", op) == 0) {
         return runPackageStats();
+    }
+    if (strcmp("firstboot", op) == 0) {
+        return runFirstBoot();
     }
     return showUsage();
 }

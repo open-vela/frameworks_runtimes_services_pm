@@ -30,4 +30,5 @@ interface IPackageManager {
     oneway void installPackage(in InstallParam param, IInstallObserver observer);
     oneway void uninstallPackage(in UninstallParam param, IUninstallObserver observer);
     PackageStats getPackageSizeInfo(@utf8InCpp String packageName);
+    boolean isFirstBoot();
 }

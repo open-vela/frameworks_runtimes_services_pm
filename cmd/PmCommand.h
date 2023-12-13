@@ -32,6 +32,7 @@ public:
     int runClear();
     int runGetPackage();
     int runPackageStats();
+    int runFirstBoot();
     int showUsage();
     int run(int argc, char *argv[]);
 

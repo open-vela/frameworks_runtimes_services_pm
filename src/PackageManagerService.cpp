@@ -35,7 +35,7 @@ using std::filesystem::remove_all;
 using std::filesystem::rename;
 using std::filesystem::temp_directory_path;
 
-PackageManagerService::PackageManagerService() {
+PackageManagerService::PackageManagerService() : mFirstBoot(false) {
     mInstaller = new PackageInstaller();
     mParser = new PackageParser();
     init();
@@ -56,6 +56,7 @@ void PackageManagerService::init() {
     PM_PROFILER_BEGIN();
     // create and scan manifest
     if (!exists(PACKAGE_LIST_PATH)) {
+        mFirstBoot = true;
         mInstaller->createPackageList();
         std::vector<PackageInfo> vecPackageInfo;
         for (const auto &entry :
@@ -318,6 +319,11 @@ Status PackageManagerService::getPackageSizeInfo(const std::string &packageName,
     pkgStats->dataSize = getDirectorySize(dataPath.c_str());
     pkgStats->cacheSize = getDirectorySize(cachePath.c_str());
     PM_PROFILER_END();
+    return Status::ok();
+}
+
+Status PackageManagerService::isFirstBoot(bool *firstBoot) {
+    *firstBoot = mFirstBoot;
     return Status::ok();
 }
 
