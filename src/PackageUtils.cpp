@@ -38,14 +38,11 @@ using std::ifstream;
 using std::ofstream;
 using std::chrono::system_clock;
 using std::filesystem::create_directories;
+using std::filesystem::directory_iterator;
 using std::filesystem::exists;
 using std::filesystem::file_size;
 using std::filesystem::is_regular_file;
-using std::filesystem::perm_options;
-using std::filesystem::permissions;
-using std::filesystem::perms;
 using std::filesystem::recursive_directory_iterator;
-using std::filesystem::remove_all;
 
 PackageConfig::PackageConfig() {
     rapidjson::Document doc;
@@ -183,6 +180,20 @@ int64_t getDirectorySize(const char *path) {
         }
     }
     return totalSize;
+}
+
+std::vector<std::string> getChildDirectories(const char *path) {
+    std::vector<std::string> childDirectories;
+    if (!exists(path)) {
+        return childDirectories;
+    }
+    std::filesystem::path folderPath = path;
+    for (const auto &entry : directory_iterator(path)) {
+        if (entry.is_directory()) {
+            childDirectories.push_back(entry.path().string());
+        }
+    }
+    return childDirectories;
 }
 
 std::string joinPath(std::string basic, std::string suffix) {
