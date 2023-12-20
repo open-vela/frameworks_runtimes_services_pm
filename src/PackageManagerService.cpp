@@ -28,12 +28,9 @@
 namespace os {
 namespace pm {
 
-using std::filesystem::copy_options;
 using std::filesystem::directory_iterator;
 using std::filesystem::exists;
-using std::filesystem::remove_all;
 using std::filesystem::rename;
-using std::filesystem::temp_directory_path;
 
 PackageManagerService::PackageManagerService() : mFirstBoot(false) {
     mInstaller = new PackageInstaller();
@@ -54,50 +51,9 @@ PackageManagerService::~PackageManagerService() {
 
 void PackageManagerService::init() {
     PM_PROFILER_BEGIN();
-    // create and scan manifest
-    if (!exists(PACKAGE_LIST_PATH)) {
-        mFirstBoot = true;
-        mInstaller->createPackageList();
+    auto scanAndGetPackages = [this](const std::vector<std::string> &scanPath) {
         std::vector<PackageInfo> vecPackageInfo;
-        for (const auto &entry :
-             directory_iterator(PackageConfig::getInstance().getAppPresetPath().c_str())) {
-            if (entry.is_directory()) {
-                PackageInfo pkgInfo;
-                pkgInfo.manifest = joinPath(entry.path().string(), MANIFEST);
-                int ret = mParser->parseManifest(&pkgInfo);
-                if (!ret) {
-                    pkgInfo.userId = mInstaller->createUserId();
-                    mPackageInfo.insert(std::make_pair(pkgInfo.packageName, pkgInfo));
-                    vecPackageInfo.push_back(pkgInfo);
-                    std::string appDataPath =
-                            joinPath(PackageConfig::getInstance().getAppDataPath(),
-                                     pkgInfo.packageName);
-                    if (!exists(appDataPath.c_str())) {
-                        createDirectory(appDataPath.c_str());
-                    }
-                }
-            }
-        }
-        mInstaller->addInfoToPackageList(vecPackageInfo);
-    } else {
-#ifdef CONFIG_SYSTEM_PACKAGE_SERVICE_DEBUG
-        std::vector<std::string> vecScanPath;
-        std::string dirPath = PackageConfig::getInstance().getAppPresetPath();
-        for (const auto &entry : directory_iterator(dirPath.c_str())) {
-            if (entry.is_directory()) {
-                vecScanPath.push_back(entry.path().string());
-            }
-        }
-        dirPath = PackageConfig::getInstance().getAppInstalledPath();
-        for (const auto &entry : directory_iterator(dirPath.c_str())) {
-            if (entry.is_directory()) {
-                if (entry.path().string() != joinPath(dirPath, "tmp")) {
-                    vecScanPath.push_back(entry.path().string());
-                }
-            }
-        }
-        std::vector<PackageInfo> vecPackageInfo;
-        for (auto path : vecScanPath) {
+        for (const auto &path : scanPath) {
             PackageInfo pkgInfo;
             pkgInfo.manifest = joinPath(path, MANIFEST);
             int ret = mParser->parseManifest(&pkgInfo);
@@ -112,11 +68,31 @@ void PackageManagerService::init() {
                 }
             }
         }
+        return vecPackageInfo;
+    };
+
+    // create and scan manifest
+    if (!exists(PACKAGE_LIST_PATH)) {
+        mFirstBoot = true;
+        mInstaller->createPackageList();
+        std::vector<std::string> vecScanPath =
+                getChildDirectories(PackageConfig::getInstance().getAppPresetPath().c_str());
+        std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
+        mInstaller->addInfoToPackageList(vecPackageInfo);
+    } else {
+#ifdef CONFIG_SYSTEM_PACKAGE_SERVICE_DEBUG
         unlink(PACKAGE_LIST_PATH);
         mInstaller->createPackageList();
+        std::vector<std::string> vecScanPath =
+                getChildDirectories(PackageConfig::getInstance().getAppPresetPath().c_str());
+        std::vector<std::string> installPath =
+                getChildDirectories(PackageConfig::getInstance().getAppInstalledPath().c_str());
+        vecScanPath.insert(vecScanPath.end(), installPath.begin(), installPath.end());
+        std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
         mInstaller->addInfoToPackageList(vecPackageInfo);
-#endif
+#else
         mInstaller->loadPackageList(&mPackageInfo);
+#endif
     }
     PM_PROFILER_END();
 }
@@ -205,7 +181,7 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     pos = rpkFullName.rfind('.');
     std::string rpkName = rpkFullName.substr(0, pos);
     std::string dstPath = joinPath(PackageConfig::getInstance().getAppInstalledPath(), rpkName);
-    std::string tmp = joinPath(PackageConfig::getInstance().getAppInstalledPath(), "tmp");
+    std::string tmp = joinPath(PackageConfig::getInstance().getAppDataPath(), "tmp");
     tmp = joinPath(tmp, rpkName);
 
     int ret = mInstaller->installApp(param);
