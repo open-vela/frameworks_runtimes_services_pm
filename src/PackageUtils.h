@@ -21,6 +21,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <vector>
 
 namespace os {
 namespace pm {
@@ -48,6 +49,7 @@ std::string getCurrentTime();
 bool createDirectory(const char *path);
 bool removeDirectory(const char *path);
 int64_t getDirectorySize(const char *path);
+std::vector<std::string> getChildDirectories(const char *path);
 int readFile(const char *filename, std::string &content);
 int writeFile(const char *filename, const std::string &data);
 std::string joinPath(std::string basic, std::string suffix);
