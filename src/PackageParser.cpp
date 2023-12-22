@@ -138,12 +138,20 @@ int PackageParser::parseQuickAppManifest(const rapidjson::Document &document, Pa
     defaultActivity.name = "QuickActivity";
     defaultActivity.launchMode = "singleTask";
     defaultActivity.taskAffinity = info->packageName;
+
+    const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
+    const rapidjson::Value baseObject = rapidjson::Value(rapidjson::kObjectType);
+    const rapidjson::Value &intent =
+            getValue<const rapidjson::Value &>(document, "intent-filter", baseObject);
+    const rapidjson::Value &actionArray =
+            getValue<const rapidjson::Value &>(intent, "actions", baseArray);
+    for (size_t j = 0; j < actionArray.Size(); j++) {
+        defaultActivity.actions.push_back(actionArray[j].GetString());
+    }
     info->activitiesInfo.push_back(defaultActivity);
 
     QuickAppInfo quickappInfo;
     quickappInfo.versionCode = getValue<int>(document, "versionCode", 0);
-    const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
-    const rapidjson::Value baseObject = rapidjson::Value(rapidjson::kObjectType);
     const rapidjson::Value &featuresArray =
             getValue<const rapidjson::Value &>(document, "features", baseArray);
     for (size_t i = 0; i < featuresArray.Size(); i++) {
