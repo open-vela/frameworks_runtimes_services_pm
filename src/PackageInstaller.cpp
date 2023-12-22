@@ -67,7 +67,7 @@ int PackageInstaller::installQuickApp(const InstallParam &param) {
         return android::NAME_NOT_FOUND;
     }
 
-    std::string tmp = joinPath(PackageConfig::getInstance().getAppInstalledPath(), "tmp");
+    std::string tmp = joinPath(PackageConfig::getInstance().getAppDataPath(), "tmp");
     tmp = joinPath(tmp, rpkName);
     if (exists(tmp.c_str())) {
         removeDirectory(tmp.c_str());
