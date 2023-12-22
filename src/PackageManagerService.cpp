@@ -77,6 +77,11 @@ void PackageManagerService::init() {
         mInstaller->createPackageList();
         std::vector<std::string> vecScanPath =
                 getChildDirectories(PackageConfig::getInstance().getAppPresetPath().c_str());
+#ifdef CONFIG_SYSTEM_PACKAGE_SERVICE_DEBUG
+        std::vector<std::string> installPath =
+                getChildDirectories(PackageConfig::getInstance().getAppInstalledPath().c_str());
+        vecScanPath.insert(vecScanPath.end(), installPath.begin(), installPath.end());
+#endif
         std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
         mInstaller->addInfoToPackageList(vecPackageInfo);
     } else {
