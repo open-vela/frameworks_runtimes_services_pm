@@ -29,7 +29,7 @@ namespace pm {
 #define PM_VERSION "1.0.0"
 #define MANIFEST "manifest.json"
 #define PACKAGE_CFG "/etc/package.cfg"
-#define PACKAGE_LIST_PATH "/data/app/packages.list"
+#define PACKAGE_LIST "packages.list"
 
 class PackageConfig {
 public:
@@ -37,12 +37,14 @@ public:
     std::string getAppPresetPath();
     std::string getAppInstalledPath();
     std::string getAppDataPath();
+    std::string getPackageListPath();
 
 private:
     PackageConfig();
     std::string mAppPresetPath;
     std::string mAppInstalledPath;
     std::string mAppDataPath;
+    std::string mPackageListPath;
 };
 
 std::string getCurrentTime();
