@@ -70,10 +70,6 @@ int PackageParser::parseManifest(PackageInfo *info) {
 int PackageParser::parseNativeManifest(const rapidjson::Document &document, PackageInfo *info) {
     if (info == nullptr) return android::NO_INIT;
     info->entry = getValue<std::string>(document, "entry", "");
-    if (info->entry.empty()) {
-        ALOGE("Failed parse manifest:%s entry field", info->manifest.c_str());
-        return android::BAD_VALUE;
-    }
     info->execfile = getValue<std::string>(document, "execfile", "");
     if (info->execfile.empty()) {
         ALOGE("Failed parse manifest:%s execfile field", info->manifest.c_str());
@@ -123,6 +119,23 @@ int PackageParser::parseNativeManifest(const rapidjson::Document &document, Pack
             serviceInfo.actions.push_back(actionArray[j].GetString());
         }
         info->servicesInfo.push_back(serviceInfo);
+    }
+
+    // check entry valid
+    bool bEntryValid = false;
+    if (info->entry.length() > 0) {
+        for (const auto &activity : info->activitiesInfo) {
+            if (activity.name == info->entry) {
+                bEntryValid = true;
+                break;
+            }
+        }
+    } else {
+        bEntryValid = true;
+    }
+    if (!bEntryValid) {
+        ALOGE("Failed parse manifest:%s entry field", info->entry.c_str());
+        return android::BAD_VALUE;
     }
     return 0;
 }
