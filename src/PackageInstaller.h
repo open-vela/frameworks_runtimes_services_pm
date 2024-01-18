@@ -27,6 +27,7 @@ namespace pm {
 
 class PackageInstaller {
 public:
+    PackageInstaller();
     int installApp(const InstallParam& param);
     int32_t createUserId();
     int createPackageList();
@@ -38,6 +39,7 @@ public:
 private:
     int installNativeApp(const InstallParam& param);
     int installQuickApp(const InstallParam& param);
+    std::string mPackgeListPath;
 };
 } // namespace pm
 } // namespace os

@@ -31,6 +31,10 @@ using std::filesystem::copy;
 using std::filesystem::exists;
 using std::filesystem::temp_directory_path;
 
+PackageInstaller::PackageInstaller() {
+    mPackgeListPath = PackageConfig::getInstance().getPackageListPath();
+}
+
 int32_t PackageInstaller::createUserId() {
     // TODO
     return 0;
@@ -100,7 +104,7 @@ bool PackageInstaller::loadPackageList(std::map<std::string, PackageInfo> *pkgIn
     }
 
     rapidjson::Document document;
-    int ret = getDocument(PACKAGE_LIST_PATH, document);
+    int ret = getDocument(mPackgeListPath.c_str(), document);
     if (ret) return false;
 
     bool isNormal = true;
@@ -137,7 +141,7 @@ int PackageInstaller::createPackageList() {
     doc.AddMember("version", 1, allocator);
     rapidjson::Value packages(rapidjson::kArrayType);
     doc.AddMember("packages", packages, allocator);
-    return writeFile(PACKAGE_LIST_PATH, toPrettyString(doc));
+    return writeFile(mPackgeListPath.c_str(), toPrettyString(doc));
 }
 
 int PackageInstaller::addInfoToPackageList(const PackageInfo &installInfo) {
@@ -147,7 +151,7 @@ int PackageInstaller::addInfoToPackageList(const PackageInfo &installInfo) {
 
 int PackageInstaller::addInfoToPackageList(const std::vector<PackageInfo> &vecPackageInfo) {
     rapidjson::Document document;
-    int ret = getDocument(PACKAGE_LIST_PATH, document);
+    int ret = getDocument(mPackgeListPath.c_str(), document);
     if (ret) return ret;
     const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
     const rapidjson::Value &cpackagesArray =
@@ -185,12 +189,12 @@ int PackageInstaller::addInfoToPackageList(const std::vector<PackageInfo> &vecPa
                        allocator);
         packagesArray.PushBack(info, allocator);
     }
-    return writeFile(PACKAGE_LIST_PATH, toPrettyString(document));
+    return writeFile(mPackgeListPath.c_str(), toPrettyString(document));
 }
 
 int PackageInstaller::deleteInfoFromPackageList(const std::string &packageName) {
     rapidjson::Document document;
-    int ret = getDocument(PACKAGE_LIST_PATH, document);
+    int ret = getDocument(mPackgeListPath.c_str(), document);
     if (ret) return ret;
     const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
     const rapidjson::Value &cpackagesArray =
@@ -203,7 +207,7 @@ int PackageInstaller::deleteInfoFromPackageList(const std::string &packageName) 
             break;
         }
     }
-    return writeFile(PACKAGE_LIST_PATH, toPrettyString(document));
+    return writeFile(mPackgeListPath.c_str(), toPrettyString(document));
 }
 
 } // namespace pm

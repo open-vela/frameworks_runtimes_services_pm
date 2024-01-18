@@ -59,12 +59,15 @@ void PackageManagerService::init() {
             int ret = mParser->parseManifest(&pkgInfo);
             if (!ret) {
                 pkgInfo.userId = mInstaller->createUserId();
-                mPackageInfo.insert(std::make_pair(pkgInfo.packageName, pkgInfo));
-                vecPackageInfo.push_back(pkgInfo);
-                std::string appDataPath = joinPath(PackageConfig::getInstance().getAppDataPath(),
-                                                   pkgInfo.packageName);
-                if (!exists(appDataPath.c_str())) {
-                    createDirectory(appDataPath.c_str());
+                auto status = mPackageInfo.insert(std::make_pair(pkgInfo.packageName, pkgInfo));
+                if (status.second) {
+                    vecPackageInfo.push_back(pkgInfo);
+                    std::string appDataPath =
+                            joinPath(PackageConfig::getInstance().getAppDataPath(),
+                                     pkgInfo.packageName);
+                    if (!exists(appDataPath.c_str())) {
+                        createDirectory(appDataPath.c_str());
+                    }
                 }
             }
         }
@@ -72,7 +75,8 @@ void PackageManagerService::init() {
     };
 
     // create and scan manifest
-    if (!exists(PACKAGE_LIST_PATH)) {
+    std::string packageListPath = PackageConfig::getInstance().getPackageListPath();
+    if (!exists(packageListPath.c_str())) {
         mFirstBoot = true;
         mInstaller->createPackageList();
         std::vector<std::string> vecScanPath =
@@ -86,7 +90,7 @@ void PackageManagerService::init() {
         mInstaller->addInfoToPackageList(vecPackageInfo);
     } else {
 #ifdef CONFIG_SYSTEM_PACKAGE_SERVICE_DEBUG
-        unlink(PACKAGE_LIST_PATH);
+        unlink(packageListPath.c_str());
         mInstaller->createPackageList();
         std::vector<std::string> vecScanPath =
                 getChildDirectories(PackageConfig::getInstance().getAppPresetPath().c_str());
@@ -155,15 +159,17 @@ Status PackageManagerService::clearAppCache(const std::string &packageName, int3
     std::error_code ec;
     std::string path = joinPath(PackageConfig::getInstance().getAppDataPath(), packageName);
     bool success = true;
-    for (const auto &entry : directory_iterator(path)) {
-        if (entry.is_directory()) {
-            if (!removeDirectory(entry.path().string().c_str())) {
-                success = false;
-            }
-        } else {
-            if (unlink(entry.path().string().c_str()) != 0) {
-                ALOGE("unlink %s failed", entry.path().string().c_str());
-                success = false;
+    if (exists(path)) {
+        for (const auto &entry : directory_iterator(path)) {
+            if (entry.is_directory()) {
+                if (!removeDirectory(entry.path().string().c_str())) {
+                    success = false;
+                }
+            } else {
+                if (unlink(entry.path().string().c_str()) != 0) {
+                    ALOGE("unlink %s failed", entry.path().string().c_str());
+                    success = false;
+                }
             }
         }
     }
@@ -185,7 +191,6 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     }
     pos = rpkFullName.rfind('.');
     std::string rpkName = rpkFullName.substr(0, pos);
-    std::string dstPath = joinPath(PackageConfig::getInstance().getAppInstalledPath(), rpkName);
     std::string tmp = joinPath(PackageConfig::getInstance().getAppDataPath(), "tmp");
     tmp = joinPath(tmp, rpkName);
 
@@ -208,6 +213,8 @@ Status PackageManagerService::installPackage(const InstallParam &param,
         return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
     }
 
+    std::string dstPath =
+            joinPath(PackageConfig::getInstance().getAppInstalledPath(), packageinfo.packageName);
     if (exists(dstPath.c_str())) {
         removeDirectory(dstPath.c_str());
     }

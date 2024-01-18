@@ -50,6 +50,7 @@ PackageConfig::PackageConfig() {
     mAppPresetPath = getValue<std::string>(doc, "appPresetPath", "/system/app");
     mAppInstalledPath = getValue<std::string>(doc, "appInstalledPath", "/data/app");
     mAppDataPath = getValue<std::string>(doc, "appDataPath", "/data/data");
+    mPackageListPath = joinPath(mAppInstalledPath, PACKAGE_LIST);
 }
 
 PackageConfig &PackageConfig::getInstance() {
@@ -67,6 +68,10 @@ std::string PackageConfig::getAppInstalledPath() {
 
 std::string PackageConfig::getAppDataPath() {
     return mAppDataPath;
+}
+
+std::string PackageConfig::getPackageListPath() {
+    return mPackageListPath;
 }
 
 std::string getCurrentTime() {
