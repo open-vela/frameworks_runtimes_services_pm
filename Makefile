@@ -49,9 +49,9 @@ MAINSRC := $(wildcard $(MAINSRC))
 NOEXPORTSRCS = $(ASRCS)$(CSRCS)$(CXXSRCS)$(MAINSRC)
 
 ifneq ($(NOEXPORTSRCS),)
-BIN := $(APPDIR)/staging/libframework.a
+BIN := $(APPDIR)/staging/libxms.a
 endif
 
-EXPORT_FILES := include
+EXPORT_FILES :=
 
 include $(APPDIR)/Application.mk
