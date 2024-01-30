@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <fstream>
+
 #include "PackageUtils.h"
 
 #include <rapidjson/prettywriter.h>
@@ -24,7 +26,6 @@
 
 #include <chrono>
 #include <ctime>
-#include <fstream>
 #include <iomanip>
 #include <sstream>
 
