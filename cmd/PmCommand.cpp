@@ -100,16 +100,23 @@ int PmCommand::runUninstall() {
 }
 
 int PmCommand::runList() {
-    std::vector<PackageInfo> pkgInfos;
-    int status = pm.getAllPackageInfo(&pkgInfos);
     std::string_view arg = nextArg();
-    for (size_t i = 0; i < pkgInfos.size(); i++) {
-        if (arg == "-a") {
-            printf("%s\n", pkgInfos[i].toString().c_str());
-        } else if (arg == "-l") {
-            printf("%s\n", pkgInfos[i].packageName.c_str());
-        } else {
-            printf("%s\n", pkgInfos[i].dumpSimplePackageInfo().c_str());
+    int status = 0;
+    if (arg == "-l") {
+        std::vector<std::string> pkgNames;
+        status = pm.getAllPackageName(&pkgNames);
+        for (size_t i = 0; i < pkgNames.size(); i++) {
+            printf("%s\n", pkgNames[i].c_str());
+        }
+    } else {
+        std::vector<PackageInfo> pkgInfos;
+        status = pm.getAllPackageInfo(&pkgInfos);
+        for (size_t i = 0; i < pkgInfos.size(); i++) {
+            if (arg == "-a") {
+                printf("%s\n", pkgInfos[i].toString().c_str());
+            } else {
+                printf("%s\n", pkgInfos[i].dumpSimplePackageInfo().c_str());
+            }
         }
     }
     return status;

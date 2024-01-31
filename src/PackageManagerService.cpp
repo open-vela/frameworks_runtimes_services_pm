@@ -296,7 +296,6 @@ Status PackageManagerService::getPackageSizeInfo(const std::string &packageName,
         ALOGE("getPackageSizeInfo package:%s can't find", packageName.c_str());
         PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_SERVICE_SPECIFIC);
-        ;
     }
 
     PackageInfo pkgInfo = mPackageInfo[packageName];
@@ -312,6 +311,24 @@ Status PackageManagerService::getPackageSizeInfo(const std::string &packageName,
 
 Status PackageManagerService::isFirstBoot(bool *firstBoot) {
     *firstBoot = mFirstBoot;
+    return Status::ok();
+}
+
+Status PackageManagerService::getAllPackageName(std::vector<std::string> *pkgNames) {
+    PM_PROFILER_BEGIN();
+    for (auto it = mPackageInfo.begin(); it != mPackageInfo.end(); it++) {
+        if (it->second.bAllValid) {
+            ALOGD("getAllPackageName:%s", it->second.toString().c_str());
+            pkgNames->push_back(it->second.packageName);
+        } else {
+            int ret = mParser->parseManifest(&it->second);
+            if (!ret) {
+                ALOGD("getAllPackageName:%s", it->second.toString().c_str());
+                pkgNames->push_back(it->second.packageName);
+            }
+        }
+    }
+    PM_PROFILER_END();
     return Status::ok();
 }
 
