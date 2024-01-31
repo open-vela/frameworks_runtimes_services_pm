@@ -122,5 +122,16 @@ int32_t PackageManager::isFirstBoot(bool *firstBoot) {
     return status.exceptionCode();
 }
 
+int32_t PackageManager::getAllPackageName(std::vector<std::string> *pkgNames) {
+    ASSERT_SERVICE(mService == nullptr);
+    PM_PROFILER_BEGIN();
+    Status status = mService->getAllPackageName(pkgNames);
+    if (!status.isOk()) {
+        ALOGE("getAllPackageName failed:%s", status.toString8().c_str());
+    }
+    PM_PROFILER_END();
+    return status.exceptionCode();
+}
+
 } // namespace pm
 } // namespace os

@@ -44,6 +44,7 @@ public:
                             const android::sp<IUninstallObserver> &observer);
     Status getPackageSizeInfo(const std::string &packageName, PackageStats *pkgStats);
     Status isFirstBoot(bool *firstBoot);
+    Status getAllPackageName(std::vector<std::string> *pkgNames);
     static android::String16 name() {
         return android::String16("package");
     }
