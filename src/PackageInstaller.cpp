@@ -45,7 +45,7 @@ int PackageInstaller::installApp(const InstallParam &param) {
     std::string suffix;
     if (pos != std::string::npos) {
         suffix = param.path.substr(pos + 1);
-        if (suffix == "rpk") {
+        if (suffix == "rpk" || suffix == "apk") {
             return installQuickApp(param);
         }
     }
@@ -54,7 +54,7 @@ int PackageInstaller::installApp(const InstallParam &param) {
 
 int PackageInstaller::installNativeApp(const InstallParam &param) {
     // TODO
-    return 0;
+    return android::INVALID_OPERATION;
 }
 
 int PackageInstaller::installQuickApp(const InstallParam &param) {
