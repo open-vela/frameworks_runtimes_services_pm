@@ -84,7 +84,7 @@ void PackageManagerService::init() {
 #ifdef CONFIG_SYSTEM_PACKAGE_SERVICE_DEBUG
         std::vector<std::string> installPath =
                 getChildDirectories(PackageConfig::getInstance().getAppInstalledPath().c_str());
-        vecScanPath.insert(vecScanPath.end(), installPath.begin(), installPath.end());
+        vecScanPath.insert(vecScanPath.begin(), installPath.begin(), installPath.end());
 #endif
         std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
         mInstaller->addInfoToPackageList(vecPackageInfo);
@@ -96,7 +96,7 @@ void PackageManagerService::init() {
                 getChildDirectories(PackageConfig::getInstance().getAppPresetPath().c_str());
         std::vector<std::string> installPath =
                 getChildDirectories(PackageConfig::getInstance().getAppInstalledPath().c_str());
-        vecScanPath.insert(vecScanPath.end(), installPath.begin(), installPath.end());
+        vecScanPath.insert(vecScanPath.begin(), installPath.begin(), installPath.end());
         std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
         mInstaller->addInfoToPackageList(vecPackageInfo);
 #else
