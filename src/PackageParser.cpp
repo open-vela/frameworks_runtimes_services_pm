@@ -49,6 +49,7 @@ int PackageParser::parseManifest(PackageInfo *info) {
     info->name = getValue<std::string>(document, "name", "");
     info->icon = getValue<std::string>(document, "icon", "");
     info->priority = getProcessPriority(getValue<std::string>(document, "priority", "middle"));
+    info->isSystemUI = getValue<bool>(document, "isSystemUI", false);
 
     switch (getApplicationType(info->appType)) {
         case ApplicationType::NATIVE:

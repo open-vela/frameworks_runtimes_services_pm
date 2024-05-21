@@ -49,6 +49,7 @@ ProcessPriority getProcessPriority(const std::string &str) {
 android::status_t PackageInfo::readFromParcel(const android::Parcel *parcel) {
     SAFE_PARCEL(parcel->readUtf8FromUtf16, &packageName);
     SAFE_PARCEL(parcel->readUtf8FromUtf16, &name);
+    SAFE_PARCEL(parcel->readBool, &isSystemUI);
     SAFE_PARCEL(parcel->readUtf8FromUtf16, &icon);
     SAFE_PARCEL(parcel->readUtf8FromUtf16, &execfile);
     SAFE_PARCEL(parcel->readUtf8FromUtf16, &entry);
@@ -71,6 +72,7 @@ android::status_t PackageInfo::readFromParcel(const android::Parcel *parcel) {
 android::status_t PackageInfo::writeToParcel(android::Parcel *parcel) const {
     SAFE_PARCEL(parcel->writeUtf8AsUtf16, packageName);
     SAFE_PARCEL(parcel->writeUtf8AsUtf16, name);
+    SAFE_PARCEL(parcel->writeBool, isSystemUI);
     SAFE_PARCEL(parcel->writeUtf8AsUtf16, icon);
     SAFE_PARCEL(parcel->writeUtf8AsUtf16, execfile);
     SAFE_PARCEL(parcel->writeUtf8AsUtf16, entry);
@@ -95,6 +97,7 @@ std::string PackageInfo::toString() const {
     os << "PackageInfo{";
     os << "packageName: " << ::android::internal::ToString(packageName);
     os << ", name: " << ::android::internal::ToString(name);
+    os << ", isSystemUI: " << ::android::internal::ToString(isSystemUI);
     os << ", icon: " << ::android::internal::ToString(icon);
     os << ", execfile: " << ::android::internal::ToString(execfile);
     os << ", entry: " << ::android::internal::ToString(entry);
@@ -122,6 +125,7 @@ std::string PackageInfo::dumpSimplePackageInfo() {
         << "  package: " << packageName << "\033[0m" << std::endl;
     oss << "  name: " << name << std::endl;
     oss << "  appType: " << appType << std::endl;
+    oss << "  isSystemUI: " << (isSystemUI ? "true" : "false") << std::endl;
     oss << "  bAllValid: " << (bAllValid ? "true" : "false") << std::endl;
     oss << "  installPath: " << installedPath << std::endl;
     oss << "  manifest: " << manifest << std::endl;
