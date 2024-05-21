@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include <fstream>
-
 #include "PackageUtils.h"
 
 #include <rapidjson/prettywriter.h>
@@ -26,6 +24,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 
@@ -143,14 +142,13 @@ bool removeDirectory(const char *path) {
 
 int readFile(const char *filename, std::string &content) {
     ifstream file(filename);
-    if (!file) {
+    if (!file.is_open()) {
         ALOGE("Failed to open file %s", filename);
         return android::NAME_NOT_FOUND;
     }
-    file.seekg(0, std::ios::end);
-    content.resize(file.tellg());
-    file.seekg(0, std::ios::beg);
-    file.read(&content[0], content.size());
+    std::ostringstream tmp;
+    tmp << file.rdbuf();
+    content = tmp.str();
     file.close();
     return 0;
 }
