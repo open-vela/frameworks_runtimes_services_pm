@@ -36,6 +36,7 @@ class PackageInfo : public ::android::Parcelable {
 public:
     std::string packageName;
     std::string name;
+    bool isSystemUI;
     std::string icon;
     std::string execfile;
     std::string entry;
