@@ -88,7 +88,7 @@ public:
 
 TEST_F(PmTest, InitStart) {
     rapidjson::Document doc;
-    getDocument(PACKAGE_LIST_PATH, doc);
+    getDocument(PACKAGE_LIST, doc);
     const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
     const rapidjson::Value &packagesArray =
             getValue<const rapidjson::Value &>(doc, "packages", baseArray);
@@ -97,7 +97,7 @@ TEST_F(PmTest, InitStart) {
     unsigned int manifestCount = 0;
     manifestCount += getDirectoryCount("/system/app");
     manifestCount += getDirectoryCount("/data/app");
-    EXPECT_EQ(exists(PACKAGE_LIST_PATH), true);
+    EXPECT_EQ(exists(PACKAGE_LIST), true);
     EXPECT_EQ(packagesArray.Size(), pkgInfos.size());
     EXPECT_EQ(manifestCount, pkgInfos.size());
 }

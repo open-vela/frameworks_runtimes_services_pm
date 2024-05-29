@@ -19,6 +19,7 @@ config SYSTEM_PACKAGE_SERVICE
 	default n
 	depends on ANDROID_BINDER
 	depends on SYSTEM_SERVER
+	depends on LIB_RAPIDJSON
 
 if SYSTEM_PACKAGE_SERVICE
 
@@ -29,7 +30,7 @@ config SYSTEM_PACKAGE_SERVICE_COMMAND
 config SYSTEM_PACKAGE_SERVICE_TEST
 	bool "Enable package manager google test"
 	default n
-	depends on GOOGLE_TEST
+	depends on LIB_GOOGLETEST
 
 config SYSTEM_PACKAGE_SERVICE_DEBUG
 	bool "Enable PMS scan AppPresetPath on every startup"
