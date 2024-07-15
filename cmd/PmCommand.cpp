@@ -158,7 +158,7 @@ int PmCommand::runPackageStats() {
     if (!status) {
         auto print = [](int64_t size, const char *name) {
             if (size < 1024) {
-                printf("%s:%lldB\n", name, size);
+                printf("%s:%" PRId64 "B\n", name, size);
             } else if (size < 1024 * 1024) {
                 printf("%s:%.1fKB\n", name, size / 1024.0);
             } else {
