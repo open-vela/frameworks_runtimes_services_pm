@@ -28,9 +28,7 @@
 namespace os {
 namespace pm {
 
-using std::filesystem::directory_iterator;
-using std::filesystem::exists;
-using std::filesystem::rename;
+namespace fs = std::filesystem;
 
 PackageManagerService::PackageManagerService() : mFirstBoot(false) {
     mInstaller = new PackageInstaller();
@@ -65,7 +63,7 @@ void PackageManagerService::init() {
                     std::string appDataPath =
                             joinPath(PackageConfig::getInstance().getAppDataPath(),
                                      pkgInfo.packageName);
-                    if (!exists(appDataPath.c_str())) {
+                    if (!fs::exists(appDataPath.c_str())) {
                         createDirectory(appDataPath.c_str());
                     }
                 }
@@ -76,7 +74,7 @@ void PackageManagerService::init() {
 
     // create and scan manifest
     std::string packageListPath = PackageConfig::getInstance().getPackageListPath();
-    if (!exists(packageListPath.c_str())) {
+    if (!fs::exists(packageListPath.c_str())) {
         mFirstBoot = true;
         mInstaller->createPackageList();
         std::vector<std::string> vecScanPath =
@@ -100,6 +98,38 @@ void PackageManagerService::init() {
         std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
         mInstaller->addInfoToPackageList(vecPackageInfo);
 #else
+        auto packagesIsEmpty = [&packageListPath]() {
+            rapidjson::Document document;
+            int ret = getDocument(packageListPath.data(), document);
+            if (ret) {
+                ALOGE("package list exist:%s, but parse document failed", packageListPath.data());
+                assert(0);
+            }
+
+            const auto baseArray = rapidjson::Value(rapidjson::kArrayType);
+            const auto &packagesArray =
+                    getValue<const rapidjson::Value &>(document, "packages", baseArray);
+            return packagesArray.Empty();
+        };
+
+        if (packagesIsEmpty()) {
+            ALOGI("package list exist:%s, but parse packages empty", packageListPath.data());
+            {
+                fs::path tmppath{packageListPath};
+                fs::remove(tmppath);
+            }
+
+            mInstaller->createPackageList();
+            std::vector<std::string> vecScanPath =
+                    getChildDirectories(PackageConfig::getInstance().getAppPresetPath().data());
+            std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
+            if (packagesIsEmpty()) {
+                ALOGE("reparse packages : %s, but it is empty", packageListPath.data());
+                assert(0);
+            }
+            mInstaller->addInfoToPackageList(vecPackageInfo);
+        }
+
         mInstaller->loadPackageList(&mPackageInfo);
 #endif
     }
@@ -159,8 +189,8 @@ Status PackageManagerService::clearAppCache(const std::string &packageName, int3
     std::error_code ec;
     std::string path = joinPath(PackageConfig::getInstance().getAppDataPath(), packageName);
     bool success = true;
-    if (exists(path)) {
-        for (const auto &entry : directory_iterator(path)) {
+    if (fs::exists(path)) {
+        for (const auto &entry : fs::directory_iterator(path)) {
             if (entry.is_directory()) {
                 if (!removeDirectory(entry.path().string().c_str())) {
                     success = false;
@@ -215,12 +245,12 @@ Status PackageManagerService::installPackage(const InstallParam &param,
 
     std::string dstPath =
             joinPath(PackageConfig::getInstance().getAppInstalledPath(), packageinfo.packageName);
-    if (exists(dstPath.c_str())) {
+    if (fs::exists(dstPath.c_str())) {
         removeDirectory(dstPath.c_str());
     }
 
     std::error_code ec;
-    rename(tmp.c_str(), dstPath.c_str(), ec);
+    fs::rename(tmp.c_str(), dstPath.c_str(), ec);
     if (ec) {
         observer->onInstallResult(packageinfo.packageName, Status::EX_SECURITY,
                                   "Failed to copy file");
@@ -230,7 +260,7 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     }
     std::string appDataPath =
             joinPath(PackageConfig::getInstance().getAppDataPath(), packageinfo.packageName);
-    if (!exists(appDataPath.c_str())) {
+    if (!fs::exists(appDataPath.c_str())) {
         createDirectory(appDataPath.c_str());
     }
 
