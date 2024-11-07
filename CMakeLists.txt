@@ -15,9 +15,13 @@
 #
 
 if(CONFIG_SYSTEM_PACKAGE_SERVICE)
+
   set(CURRENT_DIR ${CMAKE_CURRENT_LIST_DIR})
   set(CUR_TARGET package_manager)
-  nuttx_add_library(${CUR_TARGET} STATIC)
+
+  nuttx_add_prebuilt(BIN_TARGETS package_manager APP_TARGETS pm pmTest)
+
+  nuttx_library_ifndef(SKIP_PREBUILT ${CUR_TARGET})
   nuttx_add_dependencies(TARGET ${CUR_TARGET} DEPENDS android_binder)
 
   set(CFLAGS -Wno-class-memaccess)
@@ -25,9 +29,9 @@ if(CONFIG_SYSTEM_PACKAGE_SERVICE)
              ${CMAKE_CURRENT_BINARY_DIR}/aidl)
   file(GLOB_RECURSE CXXRCS ${CURRENT_DIR}/src/*.cpp)
 
-  target_compile_options(${CUR_TARGET} PRIVATE ${CFLAGS})
-  target_sources(${CUR_TARGET} PRIVATE ${CXXRCS})
-  target_include_directories(${CUR_TARGET} PRIVATE ${INCDIR})
+  nuttx_compile_options(${CFLAGS})
+  nuttx_sources(${CXXRCS})
+  nuttx_include_directories(${INCDIR})
 
   # aidl header need set_property
   set_property(
