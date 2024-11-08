@@ -128,8 +128,7 @@ std::string PackageInfo::toString() const {
 std::string PackageInfo::dumpSimplePackageInfo() {
     std::ostringstream oss;
     oss << "{" << std::endl;
-    oss << "\033[33m"
-        << "  package: " << packageName << "\033[0m" << std::endl;
+    oss << "\033[33m" << "  package: " << packageName << "\033[0m" << std::endl;
     oss << "  name: " << name << std::endl;
     oss << "  appType: " << appType << std::endl;
     oss << "  isSystemUI: " << (isSystemUI ? "true" : "false") << std::endl;
