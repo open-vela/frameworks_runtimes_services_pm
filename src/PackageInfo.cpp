@@ -66,6 +66,8 @@ android::status_t PackageInfo::readFromParcel(const android::Parcel *parcel) {
     SAFE_PARCEL(parcel->readInt32, &userId);
     SAFE_PARCEL(parcel->readInt64, &size);
     SAFE_PARCEL(parcel->readBool, &bAllValid);
+    SAFE_PARCEL(parcel->readUtf8FromUtf16, &windowEnterAnim);
+    SAFE_PARCEL(parcel->readUtf8FromUtf16, &windowExitAnim);
     return android::OK;
 }
 
@@ -89,6 +91,9 @@ android::status_t PackageInfo::writeToParcel(android::Parcel *parcel) const {
     SAFE_PARCEL(parcel->writeInt32, userId);
     SAFE_PARCEL(parcel->writeInt64, size);
     SAFE_PARCEL(parcel->writeBool, bAllValid);
+    SAFE_PARCEL(parcel->writeUtf8AsUtf16, windowEnterAnim);
+    SAFE_PARCEL(parcel->writeUtf8AsUtf16, windowExitAnim);
+
     return android::OK;
 }
 
@@ -114,6 +119,8 @@ std::string PackageInfo::toString() const {
     os << ", userId: " << ::android::internal::ToString(userId);
     os << ", size: " << ::android::internal::ToString(size);
     os << ", bAllValid: " << ::android::internal::ToString(bAllValid);
+    os << ", windowEnterAnim: " << ::android::internal::ToString(windowEnterAnim);
+    os << ", windowExitAnim: " << ::android::internal::ToString(windowExitAnim);
     os << "}";
     return os.str();
 }
@@ -121,8 +128,7 @@ std::string PackageInfo::toString() const {
 std::string PackageInfo::dumpSimplePackageInfo() {
     std::ostringstream oss;
     oss << "{" << std::endl;
-    oss << "\033[33m"
-        << "  package: " << packageName << "\033[0m" << std::endl;
+    oss << "\033[33m" << "  package: " << packageName << "\033[0m" << std::endl;
     oss << "  name: " << name << std::endl;
     oss << "  appType: " << appType << std::endl;
     oss << "  isSystemUI: " << (isSystemUI ? "true" : "false") << std::endl;
@@ -138,6 +144,8 @@ std::string PackageInfo::dumpSimplePackageInfo() {
     oss << "  priority: " << priority << std::endl;
     oss << "  userId: " << userId << std::endl;
     oss << "  size: " << size << std::endl;
+    oss << "  windowEnterAnim: " << windowEnterAnim << std::endl;
+    oss << "  windowExitAnim: " << windowExitAnim << std::endl;
     oss << "  activities:[" << std::endl;
     for (auto &activity : activitiesInfo) {
         oss << "     {" << std::endl;
