@@ -53,6 +53,8 @@ public:
     int32_t userId;
     int64_t size;
     bool bAllValid;
+    std::string windowEnterAnim;
+    std::string windowExitAnim;
 
     android::status_t readFromParcel(const android::Parcel* parcel) final;
     android::status_t writeToParcel(android::Parcel* parcel) const final;

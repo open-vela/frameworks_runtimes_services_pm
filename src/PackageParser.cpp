@@ -148,6 +148,8 @@ int PackageParser::parseQuickAppManifest(const rapidjson::Document &document, Pa
     /* quickapp not has exec,vappxms is quickapp default exec,ams according to exec how to start. */
     info->execfile = getValue<std::string>(document, "execfile", "vappxms");
     info->entry = getValue<std::string>(document, "entry", "QuickActivity");
+    info->windowEnterAnim = getValue<std::string>(document, "windowEnterAnim", "fade_in_and_scale");
+    info->windowExitAnim = getValue<std::string>(document, "windowExitAnim", "fade_out_and_scale");
     ActivityInfo defaultActivity;
     defaultActivity.name = "QuickActivity";
     defaultActivity.launchMode = "singleTask";
