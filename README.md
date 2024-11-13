@@ -1,6 +1,6 @@
-Sure! Here’s the translation:
-
 # Project Name
+
+\[ English | [简体中文](README_zh_cn.md) \]
 
 Package Management Module for Vela's XMS Module
 
