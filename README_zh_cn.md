@@ -2,7 +2,7 @@
 
 \[ [English](README.md) | 简体中文 \]
 
-Vela的XMS模块的包安装管理器模块
+openvela的XMS模块的包安装管理器模块。
 
 ## 目录
 

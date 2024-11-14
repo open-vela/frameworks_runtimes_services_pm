@@ -2,7 +2,7 @@
 
 \[ English | [简体中文](README_zh_cn.md) \]
 
-Package Management Module for Vela's XMS Module
+Package installation manager module for openvela's XMS module.
 
 ## Table of Contents
 
