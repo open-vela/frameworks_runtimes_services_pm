@@ -19,46 +19,46 @@ Package installation manager module for openvela's XMS module.
 
 - Package management can be done through the command line
 
-    Install a package:
+    - Install a package:
 
-    ```
-    pm install [packagename]
-    ```
+        ```
+        pm install [packagename]
+        ```
 
-    Query which packages are installed:
+    - Query which packages are installed:
 
-    ```
-    pm list
-    ```
+        ```
+        pm list
+        ```
 
 - Use the package management tool through source code
 
-    Install a package using the following format:
+    - Install a package using the following format:
 
-    ```
-    #include "pm/PackageManager.h"
+        ```
+        #include "pm/PackageManager.h"
 
-    PackageManager pm;
-    InstallParam parms;
-    pm.installPackage(parms);
-    ```
+        PackageManager pm;
+        InstallParam parms;
+        pm.installPackage(parms);
+        ```
 
-    Retrieve all package-related information with:
+    - Retrieve all package-related information with:
 
-    ```
-    #include "pm/PackageManager.h"
+        ```
+        #include "pm/PackageManager.h"
 
-    PackageManager pm;
-    std::vector<PackageInfo> pgInfos;
-    pm.getAllPackageInfo(&pgInfos);
-    ```
+        PackageManager pm;
+        std::vector<PackageInfo> pgInfos;
+        pm.getAllPackageInfo(&pgInfos);
+        ```
 
-    Uninstall a package using:
+    - Uninstall a package using:
 
-    ```
-    #include "pm/PackageManager.h"
+        ```
+        #include "pm/PackageManager.h"
 
-    PackageManager pm;
-    UninstallParam parms;
-    pm.uninstallPackage(parms);
-    ```
+        PackageManager pm;
+        UninstallParam parms;
+        pm.uninstallPackage(parms);
+        ```
