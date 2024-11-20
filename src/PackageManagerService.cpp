@@ -18,7 +18,9 @@
 
 #include <utils/Log.h>
 
+#include <algorithm>
 #include <filesystem>
+#include <unordered_set>
 
 #include "PackageInstaller.h"
 #include "PackageParser.h"
@@ -51,24 +53,34 @@ void PackageManagerService::init() {
     PM_PROFILER_BEGIN();
     auto scanAndGetPackages = [this](const std::vector<std::string> &scanPath) {
         std::vector<PackageInfo> vecPackageInfo;
+        std::unordered_set<std::string> filters;
         for (const auto &path : scanPath) {
             PackageInfo pkgInfo;
             pkgInfo.manifest = joinPath(path, MANIFEST);
             int ret = mParser->parseManifest(&pkgInfo);
             if (!ret) {
                 pkgInfo.userId = mInstaller->createUserId();
-                auto status = mPackageInfo.insert(std::make_pair(pkgInfo.packageName, pkgInfo));
-                if (status.second) {
-                    vecPackageInfo.push_back(pkgInfo);
-                    std::string appDataPath =
-                            joinPath(PackageConfig::getInstance().getAppDataPath(),
-                                     pkgInfo.packageName);
-                    if (!fs::exists(appDataPath.c_str())) {
-                        createDirectory(appDataPath.c_str());
-                    }
+                if (filters.count(pkgInfo.packageName)) continue;
+                vecPackageInfo.push_back(pkgInfo);
+                std::string appDataPath = joinPath(PackageConfig::getInstance().getAppDataPath(),
+                                                   pkgInfo.packageName);
+                if (!fs::exists(appDataPath.c_str())) {
+                    createDirectory(appDataPath.c_str());
                 }
             }
         }
+        return vecPackageInfo;
+    };
+
+    auto appPresetPath = PackageConfig::getInstance().getAppPresetPath();
+    auto getScanPackages = [scanAndGetPackages, &appPresetPath]() {
+        std::vector<std::string> vecScanPath = getChildDirectories(appPresetPath.data());
+#ifdef CONFIG_SYSTEM_PACKAGE_SERVICE_DEBUG
+        std::vector<std::string> installPath =
+                getChildDirectories(PackageConfig::getInstance().getAppInstalledPath().c_str());
+        vecScanPath.insert(vecScanPath.begin(), installPath.begin(), installPath.end());
+#endif
+        std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
         return vecPackageInfo;
     };
 
@@ -77,62 +89,36 @@ void PackageManagerService::init() {
     if (!fs::exists(packageListPath.c_str())) {
         mFirstBoot = true;
         mInstaller->createPackageList();
-        std::vector<std::string> vecScanPath =
-                getChildDirectories(PackageConfig::getInstance().getAppPresetPath().c_str());
-#ifdef CONFIG_SYSTEM_PACKAGE_SERVICE_DEBUG
-        std::vector<std::string> installPath =
-                getChildDirectories(PackageConfig::getInstance().getAppInstalledPath().c_str());
-        vecScanPath.insert(vecScanPath.begin(), installPath.begin(), installPath.end());
-#endif
-        std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
+        std::vector<PackageInfo> vecPackageInfo = getScanPackages();
         mInstaller->addInfoToPackageList(vecPackageInfo);
     } else {
-#ifdef CONFIG_SYSTEM_PACKAGE_SERVICE_DEBUG
-        unlink(packageListPath.c_str());
-        mInstaller->createPackageList();
-        std::vector<std::string> vecScanPath =
-                getChildDirectories(PackageConfig::getInstance().getAppPresetPath().c_str());
-        std::vector<std::string> installPath =
-                getChildDirectories(PackageConfig::getInstance().getAppInstalledPath().c_str());
-        vecScanPath.insert(vecScanPath.begin(), installPath.begin(), installPath.end());
-        std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
-        mInstaller->addInfoToPackageList(vecPackageInfo);
-#else
-        auto packagesIsEmpty = [&packageListPath]() {
-            rapidjson::Document document;
-            int ret = getDocument(packageListPath.data(), document);
-            if (ret) {
-                ALOGE("package list exist:%s, but parse document failed", packageListPath.data());
-                assert(0);
-            }
+        mInstaller->loadPackageList(&mPackageInfo);
 
-            const auto baseArray = rapidjson::Value(rapidjson::kArrayType);
-            const auto &packagesArray =
-                    getValue<const rapidjson::Value &>(document, "packages", baseArray);
-            return packagesArray.Empty();
-        };
+        std::vector<PackageInfo> vecPackageInfo = getScanPackages();
 
-        if (packagesIsEmpty()) {
-            ALOGI("package list exist:%s, but parse packages empty", packageListPath.data());
-            {
-                fs::path tmppath{packageListPath};
-                fs::remove(tmppath);
+        // Find the ones in packages.list that are not in vecPackage and delete them
+        for (const auto &[packagename, pkgInfo] : mPackageInfo) {
+            if (std::search(pkgInfo.installedPath.begin(), pkgInfo.installedPath.end(),
+                            appPresetPath.begin(),
+                            appPresetPath.end()) != pkgInfo.installedPath.end() &&
+                std::find_if(vecPackageInfo.begin(), vecPackageInfo.end(),
+                             [&packagename](const auto &pkginfo) {
+                                 return packagename == pkginfo.packageName;
+                             }) == vecPackageInfo.end()) {
+                mInstaller->deleteInfoFromPackageList(packagename);
             }
-
-            mInstaller->createPackageList();
-            std::vector<std::string> vecScanPath =
-                    getChildDirectories(PackageConfig::getInstance().getAppPresetPath().data());
-            std::vector<PackageInfo> vecPackageInfo = scanAndGetPackages(vecScanPath);
-            if (packagesIsEmpty()) {
-                ALOGE("reparse packages : %s, but it is empty", packageListPath.data());
-                assert(0);
-            }
-            mInstaller->addInfoToPackageList(vecPackageInfo);
         }
 
-        mInstaller->loadPackageList(&mPackageInfo);
-#endif
+        // Find the ones in vecPackage that are not in packages.list and add them
+        for (const auto &pkginfo : vecPackageInfo) {
+            if (mPackageInfo.find(pkginfo.packageName) == mPackageInfo.end()) {
+                mInstaller->addInfoToPackageList(pkginfo);
+            }
+        }
+        mPackageInfo.clear();
     }
+    mInstaller->loadPackageList(&mPackageInfo);
+
     PM_PROFILER_END();
 }
 
