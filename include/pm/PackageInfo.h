@@ -25,40 +25,103 @@
 namespace os {
 namespace pm {
 
-enum ProcessPriority { LOW = 0, MIDDLE, HIGH, PERSISTENT };
+/**
+ * @enum ProcessPriority
+ * @brief Represents the priority levels for a process.
+ */
+enum ProcessPriority {
+    LOW = 0,   /**< Low priority for a process */
+    MIDDLE,    /**< Medium priority for a process */
+    HIGH,      /**< High priority for a process */
+    PERSISTENT /**< Persistent priority for a process, indicating high importance */
+};
 
-enum ApplicationType { UNKNOWN = -1, NATIVE = 0, QUICKAPP };
+/**
+ * @enum ApplicationType
+ * @brief Represents the types of applications.
+ */
+enum ApplicationType {
+    UNKNOWN = -1, /**< Unknown application type */
+    NATIVE = 0,   /**< Native application type */
+    QUICKAPP      /**< Quick application type */
+};
 
+/**
+ * @brief Converts a string to a corresponding ProcessPriority value.
+ *
+ * @param[in] str The string representation of the process priority.
+ * @return The corresponding enum value of the process priority. @see ProcessPriority
+ */
 ProcessPriority getProcessPriority(const std::string& str);
+/**
+ * @brief Converts a string to a corresponding ApplicationType value.
+ *
+ * @param[in] appType The string representation of the application type.
+ * @return The corresponding enum value of the application type. @see ApplicationType
+ */
 ApplicationType getApplicationType(const std::string& appType);
 
+/**
+ * @class PackageInfo
+ * @brief Represents the information related to a package installed on the system.
+ */
 class PackageInfo : public ::android::Parcelable {
 public:
-    std::string packageName;
-    std::string name;
-    bool isSystemUI;
-    std::string icon;
-    std::string execfile;
-    std::string entry;
-    std::string installedPath;
-    std::string manifest;
-    std::string appType;
-    std::string version;
-    std::string shasum;
-    std::string installTime;
-    std::vector<ActivityInfo> activitiesInfo;
-    std::vector<ServiceInfo> servicesInfo;
-    std::optional<QuickAppInfo> extra;
-    int32_t priority;
-    int32_t userId;
-    int64_t size;
-    bool bAllValid;
-    std::string windowEnterAnim;
-    std::string windowExitAnim;
-
+    std::string packageName; /**< The name of the package. */
+    std::string name;        /**< The human-readable name of the package. */
+    bool isSystemUI;         /**< Flag indicating whether the package is part of the system UI. */
+    std::string
+            icon; /**< The icon associated with the package, typically the application's icon. */
+    std::string execfile;      /**< The path to the executable file for the package. */
+    std::string entry;         /**< The entry point for the application. */
+    std::string installedPath; /**< The installation path of the package. */
+    std::string manifest;      /**< The manifest file associated with the package. */
+    std::string appType;       /**< The type of the application */
+    std::string version;       /**< The version of the package. */
+    std::string shasum;        /**< The SHA checksum of the package to verify its integrity. */
+    std::string installTime;   /**< The installation time of the package, typically in a timestamp
+                                  format. */
+    std::vector<ActivityInfo> activitiesInfo; /**< A list of `ActivityInfo` objects representing the
+                                                 activities within the package. */
+    std::vector<ServiceInfo> servicesInfo;    /**< A list of `ServiceInfo` objects representing the
+                                                 services within the package. */
+    std::optional<QuickAppInfo>
+            extra;    /**< Optional additional information related to the quick app (if any). */
+    int32_t priority; /**< he priority level of the package. */
+    int32_t userId;   /**< The user ID associated with the package. */
+    int64_t size;     /**< The size of the package in bytes. */
+    bool bAllValid;   /**< Flag indicating whether all package data is valid. */
+    std::string windowEnterAnim; /**< The animation used when a window enters the screen. */
+    std::string windowExitAnim;  /**< The animation used when a window exits the screen. */
+    /**
+     * @brief Reads the package information from a parcel.
+     *
+     * This method is used to deserialize the `PackageInfo` object from the provided `Parcel`.
+     *
+     * @param[in] parcel The parcel from which the package information will be read.
+     * @return The status of the read operation.
+     */
     android::status_t readFromParcel(const android::Parcel* parcel) final;
+    /**
+     * @brief Writes the package information to a parcel.
+     *
+     * This method is used to serialize the `PackageInfo` object to the provided `Parcel`.
+     *
+     * @param[in] parcel The parcel to which the package information will be written.
+     * @return The status of the write operation.
+     */
     android::status_t writeToParcel(android::Parcel* parcel) const final;
+    /**
+     * @brief Converts the `PackageInfo` object to a string representation.
+     *
+     * @return A string representation of the `PackageInfo`.
+     */
     std::string toString() const;
+    /**
+     * @brief Dumps a simplified package information string.
+     *
+     * @return A simplified string representation of the package info.
+     */
     std::string dumpSimplePackageInfo();
 }; // class PackageInfo
 } // namespace pm
