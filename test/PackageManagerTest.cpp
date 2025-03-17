@@ -19,6 +19,7 @@
 
 #include <filesystem>
 #include <future>
+#include <map>
 #include <memory>
 
 #include "../src/PackageUtils.h"
@@ -70,7 +71,7 @@ public:
 
     Status onInstallResult(const std::string &packageName, int32_t code,
                            const std::string &msg) override {
-        printf("onUninstallResult: %s(%s %" PRIi32 ")\n", packageName.c_str(), msg.c_str(), code);
+        printf("onInstallResult: %s(%s %" PRIi32 ")\n", packageName.c_str(), msg.c_str(), code);
         this->set_value(code);
         return Status::ok();
     }
@@ -88,18 +89,32 @@ public:
 
 TEST_F(PmTest, InitStart) {
     rapidjson::Document doc;
-    getDocument(PACKAGE_LIST, doc);
+    getDocument(PACKAGE_CFG, doc);
+    std::string appPresetPath = getValue<std::string>(doc, "appPresetPath", "/system/app");
+    std::string appInstalledPath = getValue<std::string>(doc, "appInstalledPath", "/data/app");
+    std::string packageListPath = joinPath(appInstalledPath, PACKAGE_LIST);
+
+    rapidjson::Document docForLoad;
+    getDocument(packageListPath.c_str(), docForLoad);
     const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
     const rapidjson::Value &packagesArray =
-            getValue<const rapidjson::Value &>(doc, "packages", baseArray);
+            getValue<const rapidjson::Value &>(docForLoad, "packages", baseArray);
+    std::map<std::string, PackageInfo> pkgInfosForLoad;
+    for (unsigned int i = 0; i < packagesArray.Size(); i++) {
+        PackageInfo info;
+        info.packageName = getValue<std::string>(packagesArray[i], "package", "");
+        if (!(info.packageName.empty())) {
+            pkgInfosForLoad.insert(std::make_pair(info.packageName, info));
+        }
+    }
     std::vector<PackageInfo> pkgInfos;
     pm.getAllPackageInfo(&pkgInfos);
     unsigned int manifestCount = 0;
-    manifestCount += getDirectoryCount("/system/app");
-    manifestCount += getDirectoryCount("/data/app");
-    EXPECT_EQ(exists(PACKAGE_LIST), true);
-    EXPECT_EQ(packagesArray.Size(), pkgInfos.size());
-    EXPECT_EQ(manifestCount, pkgInfos.size());
+    manifestCount += getDirectoryCount(appPresetPath);
+    manifestCount += getDirectoryCount(appInstalledPath);
+    EXPECT_EQ(exists(packageListPath), true);
+    EXPECT_EQ(pkgInfosForLoad.size(), pkgInfos.size());
+    EXPECT_EQ(manifestCount, packagesArray.Size());
 }
 
 TEST_F(PmTest, CheckKeyField) {
@@ -111,8 +126,12 @@ TEST_F(PmTest, CheckKeyField) {
         EXPECT_STREQ(getValue<std::string>(doc, "package", "").c_str(), info.packageName.c_str());
         EXPECT_STREQ(getValue<std::string>(doc, "appType", "QUICKAPP").c_str(),
                      info.appType.c_str());
-        EXPECT_STREQ(getValue<std::string>(doc, "execfile", "").c_str(), info.execfile.c_str());
+        EXPECT_STREQ(getValue<std::string>(doc, "versionName", "").c_str(), info.version.c_str());
         EXPECT_STREQ(getValue<std::string>(doc, "name", "").c_str(), info.name.c_str());
+        EXPECT_STREQ(getValue<std::string>(doc, "icon", "").c_str(), info.icon.c_str());
+        EXPECT_EQ(getProcessPriority(getValue<std::string>(doc, "priority", "middle")),
+                  info.priority);
+        EXPECT_EQ(getValue<bool>(doc, "isSystemUI", false), info.isSystemUI);
     }
 }
 
