@@ -22,7 +22,7 @@
 #include <map>
 #include <memory>
 
-#include "../src/PackageUtils.h"
+#include "PackageUtils.h"
 #include "pm/PackageManager.h"
 
 namespace os {
@@ -46,7 +46,8 @@ public:
 
 protected:
     virtual void SetUp() override {
-        mExistPackage = "com.vela.demo";
+        android::ProcessState::self()->startThreadPool();
+        mExistPackage = "com.application.demo";
         mNotExistPackage = "com.vela.demo1";
         mExistRpkPath = "/data/package/com.application.demo.debug.1.0.0.rpk";
         mNotExistRpkPath = "/data/package/com.vela.demo.rpk";
@@ -72,9 +73,16 @@ public:
     Status onInstallResult(const std::string &packageName, int32_t code,
                            const std::string &msg) override {
         printf("onInstallResult: %s(%s %" PRIi32 ")\n", packageName.c_str(), msg.c_str(), code);
-        this->set_value(code);
+        promise_.set_value(code);
         return Status::ok();
     }
+
+    std::future<int32_t> get_future() {
+        return promise_.get_future();
+    }
+
+private:
+    std::promise<int32_t> promise_;
 };
 
 class UninstallListenerTest : public BnUninstallObserver, public std::promise<int32_t> {
@@ -82,9 +90,16 @@ public:
     Status onUninstallResult(const std::string &packageName, int32_t code,
                              const std::string &msg) override {
         printf("onUninstallResult: %s(%s %" PRIi32 ")\n", packageName.c_str(), msg.c_str(), code);
-        this->set_value(code);
+        promise_.set_value(code);
         return Status::ok();
     }
+
+    std::future<int32_t> get_future() {
+        return promise_.get_future();
+    }
+
+private:
+    std::promise<int32_t> promise_;
 };
 
 TEST_F(PmTest, InitStart) {
@@ -96,8 +111,8 @@ TEST_F(PmTest, InitStart) {
 
     rapidjson::Document docForLoad;
     getDocument(packageListPath.c_str(), docForLoad);
-    const rapidjson::Value baseArray = rapidjson::Value(rapidjson::kArrayType);
-    const rapidjson::Value &packagesArray =
+    const auto baseArray = rapidjson::Value(rapidjson::kArrayType);
+    const auto &packagesArray =
             getValue<const rapidjson::Value &>(docForLoad, "packages", baseArray);
     std::map<std::string, PackageInfo> pkgInfosForLoad;
     for (unsigned int i = 0; i < packagesArray.Size(); i++) {
@@ -135,12 +150,6 @@ TEST_F(PmTest, CheckKeyField) {
     }
 }
 
-TEST_F(PmTest, GetExistPackage) {
-    PackageInfo info;
-    EXPECT_EQ(pm.getPackageInfo(mExistPackage, &info), 0);
-    EXPECT_STREQ(mExistPackage.c_str(), info.packageName.c_str());
-}
-
 TEST_F(PmTest, GetNotExistPackage) {
     PackageInfo info;
     EXPECT_NE(pm.getPackageInfo(mNotExistPackage, &info), 0);
@@ -152,12 +161,18 @@ TEST_F(PmTest, InstallExistPackage) {
     sp<InstallListenerTest> listener = new InstallListenerTest();
     int ret = pm.installPackage(param, listener);
     EXPECT_EQ(ret, 0);
-    std::future<int32_t> f = listener->get_future();
+    auto f = listener->get_future();
     int result = f.get();
     EXPECT_EQ(result, 0);
-    EXPECT_EQ(exists("/data/app/com.application.demo.debug.1.0.0"), true);
+    EXPECT_EQ(exists("/data/app/com.application.demo"), true);
     PackageInfo info;
     EXPECT_EQ(pm.getPackageInfo(mInstallPackageName, &info), 0);
+}
+
+TEST_F(PmTest, GetExistPackage) {
+    PackageInfo info;
+    EXPECT_EQ(pm.getPackageInfo(mExistPackage, &info), 0);
+    EXPECT_STREQ(mExistPackage.c_str(), info.packageName.c_str());
 }
 
 TEST_F(PmTest, InstallRepeatPackage) {
@@ -166,11 +181,11 @@ TEST_F(PmTest, InstallRepeatPackage) {
     sp<InstallListenerTest> listener = new InstallListenerTest();
     int ret = pm.installPackage(param, listener);
     EXPECT_EQ(ret, 0);
-    std::future<int32_t> f = listener->get_future();
+    auto f = listener->get_future();
     int result = f.get();
     EXPECT_EQ(result, 0);
 
-    EXPECT_EQ(exists("/data/app/com.application.demo.debug.1.0.0"), true);
+    EXPECT_EQ(exists("/data/app/com.application.demo"), true);
     PackageInfo info;
     EXPECT_EQ(pm.getPackageInfo(mInstallPackageName, &info), 0);
 }
@@ -181,7 +196,7 @@ TEST_F(PmTest, UninstallPackage) {
     sp<UninstallListenerTest> listener = new UninstallListenerTest();
     int ret = pm.uninstallPackage(uninstallparam, listener);
     EXPECT_EQ(ret, 0);
-    std::future<int32_t> f = listener->get_future();
+    auto f = listener->get_future();
     int result = f.get();
     EXPECT_EQ(result, 0);
     PackageInfo pkginfo;
@@ -194,7 +209,7 @@ TEST_F(PmTest, UninstallNotExistPackage) {
     sp<UninstallListenerTest> listener = new UninstallListenerTest();
     int ret = pm.uninstallPackage(uninstallparam, listener);
     EXPECT_EQ(ret, 0);
-    std::future<int32_t> f = listener->get_future();
+    auto f = listener->get_future();
     int result = f.get();
     EXPECT_EQ(result, android::NAME_NOT_FOUND);
     PackageInfo pkginfo;
@@ -203,19 +218,19 @@ TEST_F(PmTest, UninstallNotExistPackage) {
 
 TEST_F(PmTest, InstallNotExistPackage) {
     InstallParam param;
-    param.path = mNotExistPackage;
+    param.path = mNotExistRpkPath;
     sp<InstallListenerTest> listener = new InstallListenerTest();
     int ret = pm.installPackage(param, listener);
     EXPECT_EQ(ret, 0);
-    std::future<int32_t> f = listener->get_future();
+    auto f = listener->get_future();
     int result = f.get();
     EXPECT_EQ(result, android::NAME_NOT_FOUND);
     EXPECT_EQ(exists("/data/app/com.vela.demo"), false);
 }
 
 extern "C" int main(int argc, char **argv) {
-    android::ProcessState::self()->startThreadPool();
     testing::InitGoogleTest(&argc, argv);
+    ::testing::GTEST_FLAG(filter) = "PmTest.*";
     return RUN_ALL_TESTS();
 }
 

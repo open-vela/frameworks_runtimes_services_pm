@@ -31,6 +31,7 @@ config SYSTEM_PACKAGE_SERVICE_TEST
 	bool "Enable package manager google test"
 	default n
 	depends on LIB_GOOGLETEST
+	depends on (LIBCXXABI && CXX_EXCEPTION) || LIBSUPCXX_TOOLCHAIN
 
 config SYSTEM_PACKAGE_SERVICE_DEBUG
 	bool "Enable PMS scan AppPresetPath on every startup"
