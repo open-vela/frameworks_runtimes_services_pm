@@ -38,6 +38,7 @@ endif
 
 ifneq ($(CONFIG_SYSTEM_PACKAGE_SERVICE_TEST),)
 CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/external/googletest/googletest/googletest/include
+CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/frameworks/runtimes/services/pm/src
 PROGNAME += pmTest
 MAINSRC += test/PackageManagerTest.cpp
 endif
