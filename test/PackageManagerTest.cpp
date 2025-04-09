@@ -49,7 +49,7 @@ protected:
         android::ProcessState::self()->startThreadPool();
         mExistPackage = "com.application.demo";
         mNotExistPackage = "com.vela.demo1";
-        mExistRpkPath = "/data/package/com.application.demo.debug.1.0.0.rpk";
+        mExistRpkPath = "/resource/package/com.application.demo.debug.1.0.0.rpk";
         mNotExistRpkPath = "/data/package/com.vela.demo.rpk";
         mInstallPackageName = "com.application.demo";
     }
