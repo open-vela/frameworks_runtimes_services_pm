@@ -32,6 +32,30 @@ using android::binder::Status;
 using std::filesystem::directory_iterator;
 using std::filesystem::exists;
 
+struct TestParams {
+    std::string packageName;
+    std::string rpkPath;
+    std::string notExistPackageName;
+    std::string notExistRpkPath;
+    const std::string dump() const {
+        return std::string("packageName: ")
+                .append(packageName)
+                .append("\n")
+                .append("rpkPath: ")
+                .append(rpkPath)
+                .append("\n")
+                .append("notExistPackageName: ")
+                .append(notExistPackageName)
+                .append("\n")
+                .append("notExistRpkPath: ")
+                .append(notExistRpkPath);
+    }
+};
+
+static TestParams g_testParams = {"com.application.demo",
+                                  "/resource/package/com.application.demo.debug.1.0.0.rpk",
+                                  "com.vela.demo1", "/data/package/com.vela.demo.rpk"};
+
 class PmTest : public testing::Test {
 public:
     unsigned int getDirectoryCount(const std::string &path) {
@@ -47,20 +71,10 @@ public:
 protected:
     virtual void SetUp() override {
         android::ProcessState::self()->startThreadPool();
-        mExistPackage = "com.application.demo";
-        mNotExistPackage = "com.vela.demo1";
-        mExistRpkPath = "/resource/package/com.application.demo.debug.1.0.0.rpk";
-        mNotExistRpkPath = "/data/package/com.vela.demo.rpk";
-        mInstallPackageName = "com.application.demo";
     }
     virtual void TearDown() override {}
 
 public:
-    std::string mExistPackage;
-    std::string mNotExistPackage;
-    std::string mExistRpkPath;
-    std::string mNotExistRpkPath;
-    std::string mInstallPackageName;
     PackageManager pm;
 };
 
@@ -152,32 +166,36 @@ TEST_F(PmTest, CheckKeyField) {
 
 TEST_F(PmTest, GetNotExistPackage) {
     PackageInfo info;
-    EXPECT_NE(pm.getPackageInfo(mNotExistPackage, &info), 0);
+    EXPECT_NE(pm.getPackageInfo(g_testParams.notExistPackageName, &info), 0);
 }
 
 TEST_F(PmTest, InstallExistPackage) {
     InstallParam param;
-    param.path = mExistRpkPath;
+    param.path = g_testParams.rpkPath;
     sp<InstallListenerTest> listener = new InstallListenerTest();
     int ret = pm.installPackage(param, listener);
     EXPECT_EQ(ret, 0);
     auto f = listener->get_future();
     int result = f.get();
     EXPECT_EQ(result, 0);
-    EXPECT_EQ(exists("/data/app/com.application.demo"), true);
+    EXPECT_EQ(exists(g_testParams.rpkPath.c_str()), true);
     PackageInfo info;
-    EXPECT_EQ(pm.getPackageInfo(mInstallPackageName, &info), 0);
+    EXPECT_EQ(pm.getPackageInfo(g_testParams.packageName, &info), 0);
 }
 
 TEST_F(PmTest, GetExistPackage) {
     PackageInfo info;
-    EXPECT_EQ(pm.getPackageInfo(mExistPackage, &info), 0);
-    EXPECT_STREQ(mExistPackage.c_str(), info.packageName.c_str());
+    EXPECT_EQ(pm.getPackageInfo(g_testParams.packageName, &info), 0);
+    auto str1 = g_testParams.packageName.c_str();
+    auto str2 = info.packageName.c_str();
+    // Note: EXPECT_STREQ crashed in sim when assert failed
+    // use EXPECT_EQ instead.
+    EXPECT_EQ(strcmp(str1, str2), 0);
 }
 
 TEST_F(PmTest, InstallRepeatPackage) {
     InstallParam param;
-    param.path = mExistRpkPath;
+    param.path = g_testParams.rpkPath;
     sp<InstallListenerTest> listener = new InstallListenerTest();
     int ret = pm.installPackage(param, listener);
     EXPECT_EQ(ret, 0);
@@ -185,14 +203,14 @@ TEST_F(PmTest, InstallRepeatPackage) {
     int result = f.get();
     EXPECT_EQ(result, 0);
 
-    EXPECT_EQ(exists("/data/app/com.application.demo"), true);
     PackageInfo info;
-    EXPECT_EQ(pm.getPackageInfo(mInstallPackageName, &info), 0);
+    EXPECT_EQ(pm.getPackageInfo(g_testParams.packageName, &info), 0);
+    EXPECT_EQ(exists(info.installedPath.c_str()), true);
 }
 
 TEST_F(PmTest, UninstallPackage) {
     UninstallParam uninstallparam;
-    uninstallparam.packageName = mInstallPackageName;
+    uninstallparam.packageName = g_testParams.packageName;
     sp<UninstallListenerTest> listener = new UninstallListenerTest();
     int ret = pm.uninstallPackage(uninstallparam, listener);
     EXPECT_EQ(ret, 0);
@@ -200,12 +218,12 @@ TEST_F(PmTest, UninstallPackage) {
     int result = f.get();
     EXPECT_EQ(result, 0);
     PackageInfo pkginfo;
-    EXPECT_EQ(pm.getPackageInfo(mInstallPackageName, &pkginfo), Status::EX_SERVICE_SPECIFIC);
+    EXPECT_EQ(pm.getPackageInfo(g_testParams.packageName, &pkginfo), Status::EX_SERVICE_SPECIFIC);
 }
 
 TEST_F(PmTest, UninstallNotExistPackage) {
     UninstallParam uninstallparam;
-    uninstallparam.packageName = mNotExistPackage;
+    uninstallparam.packageName = g_testParams.notExistPackageName;
     sp<UninstallListenerTest> listener = new UninstallListenerTest();
     int ret = pm.uninstallPackage(uninstallparam, listener);
     EXPECT_EQ(ret, 0);
@@ -213,23 +231,48 @@ TEST_F(PmTest, UninstallNotExistPackage) {
     int result = f.get();
     EXPECT_EQ(result, android::NAME_NOT_FOUND);
     PackageInfo pkginfo;
-    EXPECT_EQ(pm.getPackageInfo(mNotExistPackage, &pkginfo), Status::EX_SERVICE_SPECIFIC);
+    EXPECT_EQ(pm.getPackageInfo(g_testParams.notExistPackageName, &pkginfo),
+              Status::EX_SERVICE_SPECIFIC);
 }
 
 TEST_F(PmTest, InstallNotExistPackage) {
-    InstallParam param;
-    param.path = mNotExistRpkPath;
-    sp<InstallListenerTest> listener = new InstallListenerTest();
-    int ret = pm.installPackage(param, listener);
-    EXPECT_EQ(ret, 0);
-    auto f = listener->get_future();
-    int result = f.get();
-    EXPECT_EQ(result, android::NAME_NOT_FOUND);
-    EXPECT_EQ(exists("/data/app/com.vela.demo"), false);
+    // if package not exist, try install not exist package
+    // otherwise, it's already exist, do nothing, this case skipped.
+    PackageInfo info;
+    if (pm.getPackageInfo(g_testParams.notExistPackageName, &info) != 0) {
+        InstallParam param;
+        param.path = g_testParams.notExistRpkPath;
+        sp<InstallListenerTest> listener = new InstallListenerTest();
+        int ret = pm.installPackage(param, listener);
+        EXPECT_EQ(ret, 0);
+        auto f = listener->get_future();
+        int result = f.get();
+        EXPECT_EQ(result, android::NAME_NOT_FOUND);
+        EXPECT_NE(pm.getPackageInfo(g_testParams.notExistPackageName, &info), 0);
+    }
 }
 
 extern "C" int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);
+    // parse cli parameters
+    std::vector<std::string> args(argv + 1, argv + argc);
+    for (auto it = args.begin(); it != args.end();) {
+        if (it->find("--packageName=") == 0) {
+            g_testParams.packageName = it->substr(15);
+            it = args.erase(it);
+        } else if (it->find("--rpkPath=") == 0) {
+            g_testParams.rpkPath = it->substr(10);
+            it = args.erase(it);
+        } else if (*it == "--packageName" && next(it) != args.end()) {
+            g_testParams.packageName = *(++it);
+            it = args.erase(prev(it), it + 1);
+        } else if (*it == "--rpkPath" && next(it) != args.end()) {
+            g_testParams.rpkPath = *(++it);
+            it = args.erase(prev(it), it + 1);
+        } else {
+            ++it;
+        }
+    }
     ::testing::GTEST_FLAG(filter) = "PmTest.*";
     return RUN_ALL_TESTS();
 }
