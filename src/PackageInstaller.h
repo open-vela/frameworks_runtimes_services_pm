@@ -16,8 +16,12 @@
 
 #pragma once
 
+#include <map>
 #include <vector>
 
+#include "InstallTask.h"
+#include "UninstallTask.h"
+#include "app/Logger.h"
 #include "os/pm/IInstallObserver.h"
 #include "os/pm/InstallParam.h"
 #include "pm/PackageInfo.h"
@@ -28,18 +32,32 @@ namespace pm {
 class PackageInstaller {
 public:
     PackageInstaller();
-    int installApp(const InstallParam& param);
+    int installApp(uv_loop_t* looper, const InstallParam& param,
+                   const android::sp<IInstallObserver>& observer,
+                   InstallTask::InstallResultHandler resultHandler, const std::string& packageName);
+    int uninstallApp(uv_loop_t* looper, const std::string& path, const std::string& packageName,
+                     const android::sp<IUninstallObserver>& observer,
+                     UninstallTask::UninstallResultHandler resultHandler);
     int32_t createUserId();
     int createPackageList();
     bool loadPackageList(std::map<std::string, PackageInfo>* pkgInfos);
     int addInfoToPackageList(const PackageInfo& installInfo);
     int addInfoToPackageList(const std::vector<PackageInfo>& vecExtraInfo);
     int deleteInfoFromPackageList(const std::string& packageName);
+    void onInstallTaskCompleted(const std::string packageName);
+    void onUninstallTaskCompleted(const std::string packageName);
+    std::vector<std::string> findInstallTask();
+    std::vector<std::string> findUninstallTask();
 
 private:
     int installNativeApp(const InstallParam& param);
-    int installQuickApp(const InstallParam& param);
+    int installQuickApp(uv_loop_t* looper, const InstallParam& param,
+                        const android::sp<IInstallObserver>& observer,
+                        InstallTask::InstallResultHandler resultHandler,
+                        const std::string& packageName);
     std::string mPackgeListPath;
+    std::map<std::string, std::unique_ptr<InstallTask>> mInstallTasks;
+    std::map<std::string, std::unique_ptr<UninstallTask>> mUninstallTasks;
 };
 } // namespace pm
 } // namespace os

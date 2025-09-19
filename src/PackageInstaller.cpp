@@ -40,13 +40,16 @@ int32_t PackageInstaller::createUserId() {
     return 0;
 }
 
-int PackageInstaller::installApp(const InstallParam &param) {
+int PackageInstaller::installApp(uv_loop_t *looper, const InstallParam &param,
+                                 const android::sp<IInstallObserver> &observer,
+                                 InstallTask::InstallResultHandler resultHandler,
+                                 const std::string &packageName) {
     size_t pos = param.path.find_last_of('.');
     std::string suffix;
     if (pos != std::string::npos) {
         suffix = param.path.substr(pos + 1);
         if (suffix == "rpk" || suffix == "apk") {
-            return installQuickApp(param);
+            return installQuickApp(looper, param, observer, resultHandler, packageName);
         }
     }
     return installNativeApp(param);
@@ -57,45 +60,102 @@ int PackageInstaller::installNativeApp(const InstallParam &param) {
     return android::INVALID_OPERATION;
 }
 
-int PackageInstaller::installQuickApp(const InstallParam &param) {
-    size_t pos = param.path.find_last_of('/');
-    std::string rpkFullName = param.path;
-    if (pos != std::string::npos) {
-        rpkFullName = param.path.substr(pos + 1);
+void PackageInstaller::onInstallTaskCompleted(const std::string packageName) {
+    auto it = mInstallTasks.find(packageName);
+    if (it == mInstallTasks.end()) {
+        ALOGW("Install task not found for package: %s, may have been already removed",
+              packageName.c_str());
+        return;
     }
-    pos = rpkFullName.rfind('.');
-    std::string rpkName = rpkFullName.substr(0, pos);
+    mInstallTasks.erase(packageName);
+    ALOGI("Task completed and removed for package: %s", packageName.c_str());
+}
 
-    if (!exists(param.path.c_str())) {
-        ALOGE("%s is not exist", param.path.c_str());
-        return android::NAME_NOT_FOUND;
+void PackageInstaller::onUninstallTaskCompleted(const std::string packageName) {
+    auto it = mUninstallTasks.find(packageName);
+    if (it == mUninstallTasks.end()) {
+        ALOGW("Uninstall task not found for package: %s, may have been already removed",
+              packageName.c_str());
+        return;
+    }
+    mUninstallTasks.erase(packageName);
+    ALOGI("Task completed and removed for package: %s", packageName.c_str());
+}
+
+std::vector<std::string> PackageInstaller::findInstallTask() {
+    std::vector<std::string> taskList;
+    for (const auto &pair : mInstallTasks) {
+        taskList.push_back(pair.first);
+    }
+    return taskList;
+}
+
+std::vector<std::string> PackageInstaller::findUninstallTask() {
+    std::vector<std::string> taskList;
+    for (const auto &pair : mUninstallTasks) {
+        taskList.push_back(pair.first);
+    }
+    return taskList;
+}
+
+int PackageInstaller::installQuickApp(uv_loop_t *looper, const InstallParam &param,
+                                      const android::sp<IInstallObserver> &observer,
+                                      InstallTask::InstallResultHandler resultHandler,
+                                      const std::string &packageName) {
+    if (mInstallTasks.find(packageName) != mInstallTasks.end()) {
+        ALOGW("Package %s is already being installed, skipping duplicate request",
+              packageName.c_str());
+        return android::ALREADY_EXISTS;
     }
 
-    std::string tmp = joinPath(PackageConfig::getInstance().getAppDataPath(), "tmp");
-    tmp = joinPath(tmp, rpkName);
-    if (exists(tmp.c_str())) {
-        removeDirectory(tmp.c_str());
-    }
-    if (!createDirectory(tmp.c_str())) {
-        return android::PERMISSION_DENIED;
+    if (mUninstallTasks.find(packageName) != mUninstallTasks.end()) {
+        ALOGW("Package %s is currently uninstalling, cannot install", packageName.c_str());
+        return -1;
     }
 
-    auto *token = app_verify_init(param.path.c_str(), tmp.c_str());
-    if (!token) {
-        ALOGE("app_verify_init failed");
-        removeDirectory(tmp.c_str());
-        return android::NO_INIT;
+    auto completedCallback = [this](const std::string &name) {
+        this->onInstallTaskCompleted(name);
+    };
+
+    auto task = std::make_unique<InstallTask>(looper, param, completedCallback, resultHandler,
+                                              packageName, observer);
+    int ret = task->start();
+
+    if (ret >= 0) {
+        mInstallTasks.emplace(packageName, std::move(task));
     }
 
-    int ret = app_verify_unzip(token);
-    if (ret) {
-        app_verify_close(token);
-        removeDirectory(tmp.c_str());
-        return android::NO_INIT;
+    return ret;
+}
+
+int PackageInstaller::uninstallApp(uv_loop_t *looper, const std::string &path,
+                                   const std::string &packageName,
+                                   const android::sp<IUninstallObserver> &observer,
+                                   UninstallTask::UninstallResultHandler resultHandler) {
+    if (mUninstallTasks.find(packageName) != mUninstallTasks.end()) {
+        ALOGW("Package %s is already being uninstalled, skipping duplicate request",
+              packageName.c_str());
+        return android::ALREADY_EXISTS;
     }
 
-    app_verify_close(token);
-    return 0;
+    if (mInstallTasks.find(packageName) != mInstallTasks.end()) {
+        ALOGW("Package %s  is currently installing, cannot uninstall", packageName.c_str());
+        return -1;
+    }
+
+    auto completedCallback = [this](const std::string &pkg) {
+        this->onUninstallTaskCompleted(pkg);
+    };
+
+    auto task = std::make_unique<UninstallTask>(looper, path, packageName, observer,
+                                                completedCallback, resultHandler);
+    int ret = task->start();
+
+    if (ret >= 0) {
+        mUninstallTasks.emplace(packageName, std::move(task));
+    }
+
+    return ret;
 }
 
 bool PackageInstaller::loadPackageList(std::map<std::string, PackageInfo> *pkgInfos) {

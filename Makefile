@@ -27,6 +27,11 @@ AIDLSRCS += $(shell find aidl -name *.aidl)
 AIDLFLAGS = --lang=cpp --include=aidl/ -I. -haidl/ -oaidl/
 CXXSRCS += $(patsubst %.aidl,%$(CXXEXT),$(AIDLSRCS))
 CXXSRCS += $(wildcard src/*.cpp)
+
+PROGNAME += pmsInstaller
+PRIORITY  = SCHED_PRIORITY_DEFAULT
+STACKSIZE = $(CONFIG_SYSTEM_SERVER_STACKSIZE)
+MAINSRC += src/InstallMain.cpp
 endif
 
 ifneq ($(CONFIG_SYSTEM_PACKAGE_SERVICE_COMMAND),)

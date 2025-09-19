@@ -44,6 +44,15 @@ public:
      */
     int32_t getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo);
     /**
+     * @brief Retrieves information about packages that are currently undergoing operations
+     *        such as installation, or uninstallation.
+     *
+     * @param[out] operationStatus A pointer to a vector where the operation status information will
+     * be stored.
+     * @return Returns 0 on success or a non-zero error code on failure.
+     */
+    int32_t getPackagesInOperation(std::vector<PackageInOperation> *operationStatus);
+    /**
      * @brief Retrieves information about a specific package.
      *
      * @param[in] packageName The name of the package to fetch information for.

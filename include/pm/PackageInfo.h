@@ -26,6 +26,16 @@ namespace os {
 namespace pm {
 
 /**
+ * @enum PackageOperationStatus
+ * @brief Represents the status of package installation or uninstallation operations.
+ */
+enum class PackageOperationStatus {
+    UNKNOWN = 0,  /**< Unknown operation status */
+    INSTALLING,   /**< Package is installing */
+    UNINSTALLING, /**< Package is uninstalling */
+};
+
+/**
  * @enum ProcessPriority
  * @brief Represents the priority levels for a process.
  */

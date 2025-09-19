@@ -18,6 +18,7 @@
 
 #include <utils/String16.h>
 
+#include "app/UvLoop.h"
 #include "os/pm/BnPackageManager.h"
 #include "os/pm/IPackageManager.h"
 #include "os/pm/InstallParam.h"
@@ -41,7 +42,7 @@ public:
     /**
      * @brief Constructor for the `PackageManagerService` class.
      */
-    PackageManagerService();
+    PackageManagerService(uv_loop_t *looper);
     /**
      * @brief Destructor for the `PackageManagerService` class.
      */
@@ -53,6 +54,14 @@ public:
      * @return Returns the status of the operation. If successful, it will return `Status::ok()`.
      */
     Status getAllPackageInfo(std::vector<PackageInfo> *pkgInfos);
+    /**
+     * @brief Retrieves information about packages that are currently in an ongoing operation
+     *        (e.g., installing, or uninstalling).
+     *
+     * @param[out] operationStatus A vector of packages currently being operated on
+     * @return Returns the status of the operation. If successful, it will return `Status::ok()`.
+     */
+    Status getPackagesInOperation(std::vector<PackageInOperation> *operationStatus);
     /**
      * @brief Retrieves information about a specific package.
      *
@@ -125,6 +134,12 @@ public:
         return android::String16("package");
     }
 
+    void handleAppInstallResult(const std::string &packageName,
+                                const android::sp<IInstallObserver> &observer);
+
+    void handleAppUninstallResult(const std::string &packageName,
+                                  const android::sp<IUninstallObserver> &observer);
+
 private:
     /**
      * @brief Initializes the internal state of the `PackageManagerService`.
@@ -135,6 +150,7 @@ private:
             mPackageInfo;         /**< Map of installed packages and their information. */
     PackageInstaller *mInstaller; /**< The package installer used for installing packages. */
     PackageParser *mParser;       /**< The package parser used for parsing package data. */
+    os::app::UvLoop mLooper;      /**< The event loop used for running the service. */
 };
 
 } // namespace pm

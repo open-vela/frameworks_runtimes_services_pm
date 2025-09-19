@@ -22,9 +22,11 @@ import os.pm.IInstallObserver;
 import os.pm.UninstallParam;
 import os.pm.IUninstallObserver;
 import os.pm.PackageStats;
+import os.pm.PackageInOperation;
 
 interface IPackageManager {
     PackageInfo[] getAllPackageInfo();
+    PackageInOperation[] getPackagesInOperation();
     PackageInfo getPackageInfo(@utf8InCpp String packageName);
     int clearAppCache(@utf8InCpp String packageName);
     oneway void installPackage(in InstallParam param, IInstallObserver observer);

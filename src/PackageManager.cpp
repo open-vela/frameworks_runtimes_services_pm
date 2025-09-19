@@ -52,6 +52,17 @@ int32_t PackageManager::getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo) {
     return status.exceptionCode();
 }
 
+int32_t PackageManager::getPackagesInOperation(std::vector<PackageInOperation> *operationStatus) {
+    ASSERT_SERVICE(mService == nullptr);
+    PM_PROFILER_BEGIN();
+    Status status = mService->getPackagesInOperation(operationStatus);
+    if (!status.isOk()) {
+        ALOGE("getPackagesInOperation failed:%s", status.toString8().c_str());
+    }
+    PM_PROFILER_END();
+    return status.exceptionCode();
+}
+
 int32_t PackageManager::getPackageInfo(const std::string &packageName, PackageInfo *info) {
     ASSERT_SERVICE(mService == nullptr);
     PM_PROFILER_BEGIN();

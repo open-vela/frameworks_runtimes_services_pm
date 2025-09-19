@@ -16,9 +16,13 @@
 
 #include "pm/PackageManagerService.h"
 
+#include <sys/statvfs.h>
 #include <utils/Log.h>
+#include <uv_ext.h>
 
 #include <algorithm>
+#include <array>
+#include <chrono>
 #include <filesystem>
 #include <unordered_set>
 
@@ -26,13 +30,21 @@
 #include "PackageParser.h"
 #include "PackageTrace.h"
 #include "PackageUtils.h"
+#include "app/Logger.h"
+
+#ifdef CONFIG_HAP_APP_PATH
+#define ABS_PATH_PREFIX CONFIG_HAP_APP_PATH
+#else
+#define ABS_PATH_PREFIX "/data/quickapp"
+#endif
 
 namespace os {
 namespace pm {
 
 namespace fs = std::filesystem;
 
-PackageManagerService::PackageManagerService() : mFirstBoot(false) {
+PackageManagerService::PackageManagerService(uv_loop_t *looper)
+      : mFirstBoot(false), mLooper(looper) {
     mInstaller = new PackageInstaller();
     mParser = new PackageParser();
     init();
@@ -140,6 +152,30 @@ Status PackageManagerService::getAllPackageInfo(std::vector<PackageInfo> *pkgInf
     return Status::ok();
 }
 
+Status PackageManagerService::getPackagesInOperation(
+        std::vector<PackageInOperation> *operationStatus) {
+    PM_PROFILER_BEGIN();
+
+    const auto &installingList = mInstaller->findInstallTask();
+    for (const std::string &packageName : installingList) {
+        PackageInOperation statusInfo;
+        statusInfo.packageName = packageName;
+        statusInfo.operationStatus = static_cast<int>(PackageOperationStatus::INSTALLING);
+        operationStatus->push_back(statusInfo);
+    }
+
+    const auto &uninstallingList = mInstaller->findUninstallTask();
+    for (const std::string &packageName : uninstallingList) {
+        PackageInOperation statusInfo;
+        statusInfo.packageName = packageName;
+        statusInfo.operationStatus = static_cast<int>(PackageOperationStatus::UNINSTALLING);
+        operationStatus->push_back(statusInfo);
+    }
+
+    PM_PROFILER_END();
+    return Status::ok();
+}
+
 Status PackageManagerService::getPackageInfo(const std::string &packageName, PackageInfo *pkgInfo) {
     PM_PROFILER_BEGIN();
     ALOGD("getPackageInfo package:%s", packageName.c_str());
@@ -172,23 +208,27 @@ Status PackageManagerService::clearAppCache(const std::string &packageName, int3
         return Status::ok();
     }
 
-    std::error_code ec;
-    std::string path = joinPath(PackageConfig::getInstance().getAppDataPath(), packageName);
     bool success = true;
-    if (fs::exists(path)) {
-        for (const auto &entry : fs::directory_iterator(path)) {
-            if (entry.is_directory()) {
-                if (!removeDirectory(entry.path().string().c_str())) {
-                    success = false;
-                }
-            } else {
-                if (unlink(entry.path().string().c_str()) != 0) {
-                    ALOGE("unlink %s failed", entry.path().string().c_str());
-                    success = false;
-                }
+    constexpr std::array<const char *, 3> kTypeList = {"cache", "files", "mass"};
+
+    for (const auto &type : kTypeList) {
+        std::string absolutePath;
+#ifndef __NuttX__
+        // 在非NuttX系统上，从当前工作目录开始构建路径
+        // 路径格式: current_working_directory + ABS_PATH_PREFIX/type/packageName
+        absolutePath = fs::current_path();
+#endif
+        // 在NuttX系统上，absolutePath初始为空，路径格式直接为: ABS_PATH_PREFIX/type/packageName
+        absolutePath += std::string(ABS_PATH_PREFIX) + "/" + type + "/" + packageName;
+
+        if (fs::exists(absolutePath)) {
+            if (!removeDirectory(absolutePath.c_str())) {
+                success = false;
+                ALOGE("removeDirectory %s failed", absolutePath.c_str());
             }
         }
     }
+
     if (success) {
         *ret = 0;
     }
@@ -196,76 +236,185 @@ Status PackageManagerService::clearAppCache(const std::string &packageName, int3
     return Status::ok();
 }
 
-Status PackageManagerService::installPackage(const InstallParam &param,
-                                             const android::sp<IInstallObserver> &observer) {
-    PM_PROFILER_BEGIN();
-    ALOGD("installPackage:%s", param.toString().c_str());
+void PackageManagerService::handleAppInstallResult(const std::string &packageName,
+                                                   const android::sp<IInstallObserver> &observer) {
+    std::string dstPath = joinPath(PackageConfig::getInstance().getAppInstalledPath(), packageName);
+
+    PackageInfo packageInfo;
+    packageInfo.manifest = joinPath(dstPath, MANIFEST);
+    int ret = mParser->parseManifest(&packageInfo);
+    if (ret) {
+        ALOGE("parse manifest:%s failed\n", packageInfo.manifest.c_str());
+        observer->onInstallResult(packageInfo.packageName, ret, "Failed to parse manifest");
+        return;
+    }
+
+    packageInfo.installedPath = dstPath;
+    packageInfo.manifest = joinPath(dstPath, MANIFEST);
+    if (mPackageInfo.find(packageInfo.packageName) != mPackageInfo.end()) {
+        PackageInfo oldPackageInfo = mPackageInfo[packageInfo.packageName];
+        packageInfo.userId = oldPackageInfo.userId;
+        mPackageInfo.erase(packageInfo.packageName);
+        mInstaller->deleteInfoFromPackageList(packageInfo.packageName);
+        if (oldPackageInfo.installedPath != packageInfo.installedPath) {
+            removeDirectory(oldPackageInfo.installedPath.c_str());
+        }
+    }
+    mPackageInfo.insert(std::make_pair(packageInfo.packageName, packageInfo));
+    mInstaller->addInfoToPackageList(packageInfo);
+    observer->onInstallResult(packageInfo.packageName, 0, "success");
+}
+
+static std::string generateUniqueTmpName(const std::string &rpkName) {
+    auto now = std::chrono::system_clock::now();
+    auto timestamp =
+            std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
+    pthread_t thread_id = pthread_self();
+
+    return rpkName + "_" + std::to_string(timestamp) + "_" +
+            std::to_string(static_cast<uint64_t>(thread_id));
+}
+
+static int unzipAndParseManifest(const InstallParam &param, PackageInfo &info,
+                                 PackageParser *parser) {
+    if (!fs::exists(param.path.c_str())) {
+        ALOGE("%s is not exist", param.path.c_str());
+        return android::NAME_NOT_FOUND;
+    }
+
     size_t pos = param.path.find_last_of('/');
     std::string rpkFullName = param.path;
     if (pos != std::string::npos) {
         rpkFullName = param.path.substr(pos + 1);
     }
+
     pos = rpkFullName.rfind('.');
     std::string rpkName = rpkFullName.substr(0, pos);
-    std::string tmp = joinPath(PackageConfig::getInstance().getAppDataPath(), "tmp");
-    tmp = joinPath(tmp, rpkName);
+    std::string uniqueTmpName = generateUniqueTmpName(rpkName);
+    std::string tmpBase = joinPath(PackageConfig::getInstance().getAppDataPath(), "tmp");
+    std::string tmp = joinPath(tmpBase, uniqueTmpName);
 
-    int ret = mInstaller->installApp(param);
+    if (fs::exists(tmp.c_str())) {
+        removeDirectory(tmp.c_str());
+    }
+    if (!createDirectory(tmp.c_str())) {
+        return android::PERMISSION_DENIED;
+    }
+
+    auto *token = app_verify_init(param.path.c_str(), tmp.c_str());
+    if (!token) {
+        ALOGE("app_verify_init failed");
+        removeDirectory(tmp.c_str());
+        return android::NO_INIT;
+    }
+
+    ALOGI("app_pre_unzip manifest.json...");
+    int error_code = app_pre_unzip(token, "manifest.json");
+    if (error_code) {
+        ALOGE("app_pre_unzip manifest.json failed");
+        app_verify_close(token);
+        removeDirectory(tmp.c_str());
+        return android::NO_INIT;
+    }
+
+    info.manifest = joinPath(tmp, MANIFEST);
+    int ret = parser->parseManifest(&info);
     if (ret) {
-        observer->onInstallResult(param.path, ret, "Failed to deal with rpkpackage");
+        removeDirectory(tmp.c_str());
+        ALOGE("parse manifest:%s failed\n", info.manifest.c_str());
+        app_verify_close(token);
+        return ret;
+    }
+
+    app_verify_close(token);
+    removeDirectory(tmp.c_str());
+    return 0;
+}
+
+static bool hasEnoughDiskSpace(const char *path, uint64_t requiredBytes) {
+    struct statvfs stat;
+    if (statvfs(path, &stat) != 0) {
+        ALOGE("Failed to statvfs path: %s", path);
+        return false;
+    }
+
+    uint64_t available = stat.f_bsize * stat.f_bavail;
+    return available >= requiredBytes;
+}
+
+Status PackageManagerService::installPackage(const InstallParam &param,
+                                             const android::sp<IInstallObserver> &observer) {
+    PM_PROFILER_BEGIN();
+    ALOGD("installPackage:%s", param.toString().c_str());
+
+    std::string diskPath = PackageConfig::getInstance().getAppInstalledPath();
+    if (!hasEnoughDiskSpace(diskPath.c_str(), 50 * 1024)) { // 50KB
+
+        observer->onInstallResult(param.path, android::NO_MEMORY,
+                                  "Failed to install package, not enough disk space");
+        ALOGE("Not enough disk space under %s", diskPath.c_str());
+        PM_PROFILER_END();
+        return Status::fromExceptionCode(Status::EX_SECURITY);
+    }
+
+    PackageInfo info;
+    int pre_unzip_result = unzipAndParseManifest(param, info, mParser);
+    if (pre_unzip_result) {
+        observer->onInstallResult(param.path, pre_unzip_result,
+                                  "Failed to pre-unzip and parse manifest.json");
+        ALOGE("pre-unzip and parse manifest.json failed");
+        PM_PROFILER_END();
+        return Status::fromExceptionCode(Status::EX_ILLEGAL_STATE);
+    }
+
+    auto packageName = info.packageName;
+    auto it = mPackageInfo.find(packageName);
+    if (it != mPackageInfo.end()) {
+        auto &oldQuickAppInfo = it->second.extra;
+        auto &newQuickAppInfo = info.extra;
+        if ((oldQuickAppInfo->versionCode > newQuickAppInfo->versionCode) &&
+            (param.force == false)) {
+            observer->onInstallResult(packageName, android::NOT_ENOUGH_DATA,
+                                      "Failed to install package, version is too low");
+            ALOGE("install package:%s failed, version is too low", packageName.c_str());
+            PM_PROFILER_END();
+            return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
+        }
+    }
+
+    auto resultHandler = [this](const std::string &tmpPath,
+                                const android::sp<IInstallObserver> &installObserver) {
+        this->handleAppInstallResult(tmpPath, installObserver);
+    };
+
+    int ret = mInstaller->installApp(mLooper.get(), param, observer, resultHandler, packageName);
+    if (ret < 0) {
+        std::string msg;
+        if (ret == android::NAME_NOT_FOUND) {
+            msg = "application package does not exist";
+        } else if (ret == android::ALREADY_EXISTS) {
+            msg = "installation task in progress, repeated submission error";
+        } else {
+            msg = "failed to deal with rpkpackage";
+        }
+        observer->onInstallResult(param.path, ret, msg);
         ALOGE("decompress %s failed", param.path.c_str());
         PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_ILLEGAL_STATE);
     }
 
-    PackageInfo packageinfo;
-    packageinfo.manifest = joinPath(tmp, MANIFEST);
-    ret = mParser->parseManifest(&packageinfo);
-    if (ret) {
-        removeDirectory(tmp.c_str());
-        ALOGE("parse manifest:%s failed\n", packageinfo.manifest.c_str());
-        observer->onInstallResult(packageinfo.packageName, ret, "Failed to parse manifest");
-        PM_PROFILER_END();
-        return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
-    }
-
-    std::string dstPath =
-            joinPath(PackageConfig::getInstance().getAppInstalledPath(), packageinfo.packageName);
-    if (fs::exists(dstPath.c_str())) {
-        removeDirectory(dstPath.c_str());
-    }
-
-    std::error_code ec;
-    fs::rename(tmp.c_str(), dstPath.c_str(), ec);
-    if (ec) {
-        observer->onInstallResult(packageinfo.packageName, Status::EX_SECURITY,
-                                  "Failed to copy file");
-        ALOGE("Copy from %s to %s Failed:%s", tmp.c_str(), dstPath.c_str(), ec.message().c_str());
-        PM_PROFILER_END();
-        return Status::fromExceptionCode(Status::EX_SECURITY);
-    }
-    std::string appDataPath =
-            joinPath(PackageConfig::getInstance().getAppDataPath(), packageinfo.packageName);
-    if (!fs::exists(appDataPath.c_str())) {
-        createDirectory(appDataPath.c_str());
-    }
-
-    packageinfo.installedPath = dstPath;
-    packageinfo.manifest = joinPath(dstPath, MANIFEST);
-    if (mPackageInfo.find(packageinfo.packageName) != mPackageInfo.end()) {
-        PackageInfo oldPackageInfo = mPackageInfo[packageinfo.packageName];
-        packageinfo.userId = oldPackageInfo.userId;
-        mPackageInfo.erase(packageinfo.packageName);
-        mInstaller->deleteInfoFromPackageList(packageinfo.packageName);
-        if (oldPackageInfo.installedPath != packageinfo.installedPath) {
-            removeDirectory(oldPackageInfo.installedPath.c_str());
-        }
-    }
-    mPackageInfo.insert(std::make_pair(packageinfo.packageName, packageinfo));
-    mInstaller->addInfoToPackageList(packageinfo);
-    observer->onInstallResult(packageinfo.packageName, 0, "success");
-    PM_PROFILER_END();
     return Status::ok();
+}
+
+void PackageManagerService::handleAppUninstallResult(
+        const std::string &packageName, const android::sp<IUninstallObserver> &observer) {
+    mPackageInfo.erase(packageName);
+    mInstaller->deleteInfoFromPackageList(packageName);
+
+    if (observer) {
+        observer->onUninstallResult(packageName, 0, "success");
+    }
 }
 
 Status PackageManagerService::uninstallPackage(const UninstallParam &param,
@@ -282,25 +431,26 @@ Status PackageManagerService::uninstallPackage(const UninstallParam &param,
         return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT);
     }
 
-    if (!removeDirectory(mPackageInfo[param.packageName].installedPath.c_str())) {
+    auto resultHandler = [this](const std::string &packageName,
+                                const android::sp<IUninstallObserver> &uninstallObserver) {
+        this->handleAppUninstallResult(packageName, uninstallObserver);
+    };
+    int ret = mInstaller->uninstallApp(mLooper.get(), mPackageInfo[param.packageName].installedPath,
+                                       param.packageName, observer, resultHandler);
+
+    if (ret < 0) {
+        std::string msg = "failed to remove package";
+        if (ret == android::ALREADY_EXISTS) {
+            msg = "uninstall task in progress, repeated submission error";
+        }
         if (observer) {
-            observer->onUninstallResult(param.packageName, android::PERMISSION_DENIED,
-                                        "Delete Directory Failed");
+            observer->onUninstallResult(param.packageName, ret, msg);
         }
         ALOGE("Delete Directory:%s Failed", mPackageInfo[param.packageName].installedPath.c_str());
         PM_PROFILER_END();
         return Status::fromExceptionCode(Status::EX_UNSUPPORTED_OPERATION);
     }
 
-    mPackageInfo.erase(param.packageName);
-    mInstaller->deleteInfoFromPackageList(param.packageName);
-    if (param.clearCache) {
-        removeDirectory(
-                joinPath(PackageConfig::getInstance().getAppDataPath(), param.packageName).c_str());
-    }
-    if (observer) {
-        observer->onUninstallResult(param.packageName, 0, "success");
-    }
     PM_PROFILER_END();
     return Status::ok();
 }
