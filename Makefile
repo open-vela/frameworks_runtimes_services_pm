@@ -26,7 +26,7 @@ CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/external/rapidjson/rapidjson/include  ${IN
 AIDLSRCS += $(shell find aidl -name *.aidl)
 AIDLFLAGS = --lang=cpp --include=aidl/ -I. -haidl/ -oaidl/
 CXXSRCS += $(patsubst %.aidl,%$(CXXEXT),$(AIDLSRCS))
-CXXSRCS += $(wildcard src/*.cpp)
+CXXSRCS += $(filter-out src/InstallMain.cpp, $(wildcard src/*.cpp))
 
 PROGNAME += pmsInstaller
 PRIORITY  = SCHED_PRIORITY_DEFAULT

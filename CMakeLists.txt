@@ -28,6 +28,7 @@ if(CONFIG_SYSTEM_PACKAGE_SERVICE)
   set(INCDIR ${CURRENT_DIR}/include ${CURRENT_DIR}/../include
              ${CMAKE_CURRENT_BINARY_DIR}/aidl)
   file(GLOB_RECURSE CXXRCS ${CURRENT_DIR}/src/*.cpp)
+  list(REMOVE_ITEM CXXRCS ${CURRENT_DIR}/src/InstallMain.cpp)
 
   nuttx_compile_options(${CFLAGS})
   nuttx_sources(${CXXRCS})
@@ -57,6 +58,20 @@ if(CONFIG_SYSTEM_PACKAGE_SERVICE)
     --lang=cpp
     AIDLS
     ${AIDLS})
+
+  nuttx_add_application(
+    NAME
+    pmsInstaller
+    STACKSIZE
+    ${CONFIG_SYSTEM_SERVER_STACKSIZE}
+    PRIORITY
+    SCHED_PRIORITY_DEFAULT
+    SRCS
+    src/InstallMain.cpp
+    INCLUDE_DIRECTORIES
+    ${INCDIR}
+    DEPENDS
+    ${CUR_TARGET})
 
   # pm command tool
   if(CONFIG_SYSTEM_PACKAGE_SERVICE_COMMAND)
