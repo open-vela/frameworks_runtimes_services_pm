@@ -332,15 +332,24 @@ static int unzipAndParseManifest(const InstallParam &param, PackageInfo &info,
     return 0;
 }
 
-static bool hasEnoughDiskSpace(const char *path, uint64_t requiredBytes) {
-    struct statvfs stat;
-    if (statvfs(path, &stat) != 0) {
-        ALOGE("Failed to statvfs path: %s", path);
+static bool hasEnoughDiskSpace(const char *diskPath, const char *packagePath) {
+    struct statvfs diskStat;
+    struct stat packageStat;
+    if (statvfs(diskPath, &diskStat) != 0) {
+        ALOGE("Failed to statvfs path: %s", diskPath);
         return false;
     }
 
-    uint64_t available = stat.f_bsize * stat.f_bavail;
-    return available >= requiredBytes;
+    uint64_t available = diskStat.f_bsize * diskStat.f_bavail;
+    if (stat(packagePath, &packageStat) != 0) {
+        ALOGE("Failed to get file size for: %s", packagePath);
+        return false;
+    }
+
+    uint64_t requiredSpace =
+            static_cast<uint64_t>(packageStat.st_size) * 3; // 通常解压后的大小是压缩包的2-3倍
+
+    return available >= requiredSpace;
 }
 
 Status PackageManagerService::installPackage(const InstallParam &param,
@@ -349,7 +358,7 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     ALOGD("installPackage:%s", param.toString().c_str());
 
     std::string diskPath = PackageConfig::getInstance().getAppInstalledPath();
-    if (!hasEnoughDiskSpace(diskPath.c_str(), 50 * 1024)) { // 50KB
+    if (!hasEnoughDiskSpace(diskPath.c_str(), param.path.c_str())) { // 50KB
 
         observer->onInstallResult(param.path, android::NO_MEMORY,
                                   "Failed to install package, not enough disk space");
