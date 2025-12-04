@@ -33,6 +33,8 @@ using android::binder::Status;
 class PackageInstaller;
 class PackageParser;
 
+class SlicedPackageInfo;
+
 /**
  * @class PackageManagerService
  * @brief This class provides the implementation for managing packages in the system.
@@ -54,6 +56,15 @@ public:
      * @return Returns the status of the operation. If successful, it will return `Status::ok()`.
      */
     Status getAllPackageInfo(std::vector<PackageInfo> *pkgInfos);
+    /**
+     * @brief Retrieves information about all installed packages using a slicing mechanism.
+     *
+     * @param[in] sliceSize The size of each slice to retrieve.
+     * @param[out] slicedInfo A pointer to a SlicedPackageInfo object to store the first slice and
+     * provider.
+     * @return Returns the status of the operation. If successful, it will return `Status::ok()`.
+     */
+    Status getAllPackageInfoEx(int32_t sliceSize, SlicedPackageInfo *slicedInfo);
     /**
      * @brief Retrieves information about packages that are currently in an ongoing operation
      *        (e.g., installing, or uninstalling).

@@ -52,6 +52,49 @@ int32_t PackageManager::getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo) {
     return status.exceptionCode();
 }
 
+int32_t PackageManager::getAllPackageInfoEx(std::vector<PackageInfo> *pkgsInfo, int32_t sliceSize) {
+    ASSERT_SERVICE(mService == nullptr);
+    PM_PROFILER_BEGIN();
+
+    pkgsInfo->clear();
+    ::os::pm::SlicedPackageInfo slicedInfo;
+    Status status = mService->getAllPackageInfoEx(sliceSize, &slicedInfo);
+
+    if (!status.isOk()) {
+        ALOGE("getAllPackageInfoEx failed:%s", status.toString8().c_str());
+        PM_PROFILER_END();
+        return status.exceptionCode();
+    }
+
+    // Add first slice
+    pkgsInfo->insert(pkgsInfo->end(), slicedInfo.firstSlice.begin(), slicedInfo.firstSlice.end());
+
+    int receivedCount = slicedInfo.firstSlice.size();
+    sp<IPackageInfoProvider> provider = slicedInfo.provider;
+
+    if (provider != nullptr) {
+        while (receivedCount < slicedInfo.totalSize) {
+            std::vector<PackageInfo> nextSlice;
+            status = provider->getNext(receivedCount, sliceSize, &nextSlice);
+            if (!status.isOk() || nextSlice.empty()) {
+                ALOGE("Failed to get next slice or slice empty. error: %s",
+                      status.toString8().c_str());
+                break;
+            }
+            pkgsInfo->insert(pkgsInfo->end(), nextSlice.begin(), nextSlice.end());
+            receivedCount += nextSlice.size();
+        }
+    }
+
+    if (receivedCount != slicedInfo.totalSize) {
+        ALOGW("Mismatched package count: expected %" PRId32 ", got %" PRId32, slicedInfo.totalSize,
+              static_cast<int32_t>(pkgsInfo->size()));
+    }
+
+    PM_PROFILER_END();
+    return status.isOk() ? 0 : status.exceptionCode();
+}
+
 int32_t PackageManager::getPackagesInOperation(std::vector<PackageInOperation> *operationStatus) {
     ASSERT_SERVICE(mService == nullptr);
     PM_PROFILER_BEGIN();

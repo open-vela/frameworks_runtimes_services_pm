@@ -23,9 +23,11 @@ import os.pm.UninstallParam;
 import os.pm.IUninstallObserver;
 import os.pm.PackageStats;
 import os.pm.PackageInOperation;
+import os.pm.SlicedPackageInfo;
 
 interface IPackageManager {
     PackageInfo[] getAllPackageInfo();
+    SlicedPackageInfo getAllPackageInfoEx(int sliceSize);
     PackageInOperation[] getPackagesInOperation();
     PackageInfo getPackageInfo(@utf8InCpp String packageName);
     int clearAppCache(@utf8InCpp String packageName);

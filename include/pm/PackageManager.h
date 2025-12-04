@@ -18,6 +18,7 @@
 
 #include "os/pm/BnInstallObserver.h"
 #include "os/pm/BnUninstallObserver.h"
+#include "os/pm/IPackageInfoProvider.h"
 #include "os/pm/IPackageManager.h"
 #include "os/pm/PackageStats.h"
 
@@ -43,6 +44,14 @@ public:
      * @return Returns 0 on success or a non-zero error code on failure.
      */
     int32_t getAllPackageInfo(std::vector<PackageInfo> *pkgsInfo);
+    /**
+     * @brief Retrieves information about all installed packages.
+     *
+     * @param[out] pkgsInfo A pointer to a vector where the package information will be stored.
+     * @param[in] sliceSize The size of each slice to retrieve.
+     * @return Returns 0 on success or a non-zero error code on failure.
+     */
+    int32_t getAllPackageInfoEx(std::vector<PackageInfo> *pkgsInfo, int32_t sliceSize);
     /**
      * @brief Retrieves information about packages that are currently undergoing operations
      *        such as installation, or uninstallation.

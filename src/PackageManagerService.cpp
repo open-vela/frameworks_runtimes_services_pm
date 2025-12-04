@@ -31,6 +31,8 @@
 #include "PackageTrace.h"
 #include "PackageUtils.h"
 #include "app/Logger.h"
+#include "os/pm/BnPackageInfoProvider.h"
+#include "pm/SlicedPackageInfo.h"
 
 #ifdef CONFIG_HAP_APP_PATH
 #define ABS_PATH_PREFIX CONFIG_HAP_APP_PATH
@@ -42,6 +44,30 @@ namespace os {
 namespace pm {
 
 namespace fs = std::filesystem;
+
+class PackageInfoProvider : public BnPackageInfoProvider {
+public:
+    explicit PackageInfoProvider(const std::vector<PackageInfo> &allInfos)
+          : mAllPackageInfos(allInfos) {}
+    virtual ~PackageInfoProvider() = default;
+
+    Status getNext(int32_t from, int32_t count, std::vector<PackageInfo> *pkgInfos) override {
+        auto size = static_cast<int32_t>(mAllPackageInfos.size());
+        if (from < 0 || from >= size) {
+            // Invalid start index, return empty list.
+            return Status::ok();
+        }
+
+        int32_t end = std::min(from + count, size);
+        for (int32_t i = from; i < end; ++i) {
+            pkgInfos->push_back(mAllPackageInfos[i]);
+        }
+        return Status::ok();
+    }
+
+private:
+    const std::vector<PackageInfo> mAllPackageInfos;
+};
 
 PackageManagerService::PackageManagerService(uv_loop_t *looper)
       : mFirstBoot(false), mLooper(looper) {
@@ -148,6 +174,40 @@ Status PackageManagerService::getAllPackageInfo(std::vector<PackageInfo> *pkgInf
             }
         }
     }
+    PM_PROFILER_END();
+    return Status::ok();
+}
+
+Status PackageManagerService::getAllPackageInfoEx(int32_t sliceSize,
+                                                  SlicedPackageInfo *slicedInfo) {
+    PM_PROFILER_BEGIN();
+    std::vector<PackageInfo> allInfos;
+    for (auto it = mPackageInfo.begin(); it != mPackageInfo.end(); it++) {
+        if (it->second.bAllValid) {
+            allInfos.push_back(it->second);
+        } else {
+            int ret = mParser->parseManifest(&it->second);
+            if (!ret) {
+                allInfos.push_back(it->second);
+            }
+        }
+    }
+
+    slicedInfo->totalSize = allInfos.size();
+
+    // Create the provider
+    android::sp<IPackageInfoProvider> provider = new PackageInfoProvider(allInfos);
+    slicedInfo->provider = provider;
+
+    // Prepare the first slice
+    int32_t firstSliceSize = std::min(static_cast<int32_t>(allInfos.size()), sliceSize);
+    for (int32_t i = 0; i < firstSliceSize; ++i) {
+        slicedInfo->firstSlice.push_back(allInfos[i]);
+    }
+
+    ALOGD("getAllPackageInfoEx: total= %" PRId32 "firstSlice= %" PRId32, slicedInfo->totalSize,
+          static_cast<int32_t>(slicedInfo->firstSlice.size()));
+
     PM_PROFILER_END();
     return Status::ok();
 }
