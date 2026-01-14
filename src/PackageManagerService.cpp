@@ -417,6 +417,14 @@ Status PackageManagerService::installPackage(const InstallParam &param,
     PM_PROFILER_BEGIN();
     ALOGD("installPackage:%s", param.toString().c_str());
 
+    if (!fs::exists(param.path)) {
+        observer->onInstallResult(param.path, android::NAME_NOT_FOUND,
+                                  "Failed to install package, path does not exist");
+        ALOGE("Install package path does not exist: %s", param.path.c_str());
+        PM_PROFILER_END();
+        return Status::fromExceptionCode(Status::EX_ILLEGAL_STATE);
+    }
+
     std::string diskPath = PackageConfig::getInstance().getAppInstalledPath();
     if (!hasEnoughDiskSpace(diskPath.c_str(), param.path.c_str())) { // 50KB
 
